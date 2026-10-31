@@ -6,7 +6,7 @@
 export * from './auth';
 export * from './product';
 export * from './plan';
-import type { Plan } from './plan';
+import type { Invoice } from './invoice';
 
 // ─── API Response & Error Envelopes ─────────────────────────────────────────
 export interface ApiFieldError {
@@ -82,64 +82,10 @@ export type DiscountType = 'fixed' | 'percent';
 // Tax applies to
 export type TaxAppliesTo = 'all' | 'product' | 'hsn';
 
-// ─── Domain Models ─────────────────────────────────────────────────────────
-export interface Customer {
-  id: number | string;
-  user_id?: number;
-  company_name?: string;
-  company?: string; // compatibility alias
-  name?: string; // fallback alias
-  email?: string;
-  phone?: string | null;
-  gstin?: string | null;
-  billing_address?: string | null;
-  shipping_address?: string | null;
-  credit_limit?: string | number;
-  outstanding_balance?: string | number;
-  created_at?: string;
-  updated_at?: string;
-  user?: {
-    id: number;
-    email: string;
-    full_name: string;
-    role: string;
-  };
-}
-
-
-export interface Subscription {
-  id: number | string;
-  customer_id: number | string;
-  customer?: Customer;
-  plan_id: number | string;
-  plan?: Plan;
-  status: SubscriptionStatus;
-  start_date: string;
-  end_date?: string | null;
-  next_billing_date?: string | null;
-  amount: string | number;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface Invoice {
-  id: number | string;
-  invoice_number: string;
-  customer_id: number | string;
-  customer?: Customer;
-  subscription_id?: number | string | null;
-  status: InvoiceStatus;
-  issue_date: string;
-  due_date: string;
-  subtotal: string | number;
-  tax_amount: string | number;
-  discount_amount: string | number;
-  total: string | number;
-  paid_amount: string | number;
-  currency: string;
-  created_at?: string;
-  updated_at?: string;
-}
+export * from './customer';
+export * from './template';
+export * from './subscription';
+export * from './invoice';
 
 export interface Payment {
   id: number | string;
@@ -170,6 +116,7 @@ export interface Tax {
   id: number | string;
   name: string;
   rate: string | number;
+  rate_percent?: string | number;
   applies_to?: TaxAppliesTo;
   hsn_code?: string | null;
   is_default: boolean;
@@ -177,13 +124,6 @@ export interface Tax {
   created_at?: string;
 }
 
-export interface QuotationTemplate {
-  id: number | string;
-  name: string;
-  description?: string;
-  valid_days: number;
-  created_at?: string;
-}
 
 export interface Report {
   id: number | string;

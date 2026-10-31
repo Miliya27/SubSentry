@@ -48,6 +48,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Reports',              path: '/reports',               icon: 'BarChart2',        roles: ['admin', 'staff'] },
   { label: 'Settings',             path: '/settings',              icon: 'Settings',         roles: ['admin'] },
   // Customer-facing routes
+  { label: 'Portal',               path: '/portal',                icon: 'LayoutDashboard',  roles: ['customer'] },
   { label: 'My Subscriptions',     path: '/my/subscriptions',      icon: 'Receipt',          roles: ['customer'] },
   { label: 'My Invoices',          path: '/my/invoices',           icon: 'FileText',         roles: ['customer'] },
 ];
