@@ -1,6 +1,7 @@
 /**
  * src/App.tsx
- * Root router configuration with complete authentication flow and ProtectedRoute guards.
+ * Root router configuration with complete authentication flow,
+ * Product & Plan management routes, and ProtectedRoute guards.
  */
 import { lazy, Suspense } from 'react';
 import {
@@ -24,7 +25,9 @@ const ResetPasswordPage  = lazy(() => import('./pages/ResetPasswordPage'));
 const DashboardPage       = lazy(() => import('./pages/DashboardPage'));
 const CustomersPage       = lazy(() => import('./pages/CustomersPage'));
 const ProductsPage        = lazy(() => import('./pages/ProductsPage'));
+const ProductFormPage     = lazy(() => import('./pages/ProductFormPage'));
 const PlansPage           = lazy(() => import('./pages/PlansPage'));
+const PlanFormPage        = lazy(() => import('./pages/PlanFormPage'));
 const QuotationsPage      = lazy(() => import('./pages/QuotationsPage'));
 const SubscriptionsPage   = lazy(() => import('./pages/SubscriptionsPage'));
 const InvoicesPage        = lazy(() => import('./pages/InvoicesPage'));
@@ -101,7 +104,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <IndexRedirect /> },
 
-      // Admin & Staff routes
+      // Dashboard
       {
         path: '/dashboard',
         element: (
@@ -110,6 +113,8 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+
+      // Customers
       {
         path: '/customers',
         element: (
@@ -118,6 +123,8 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+
+      // Products & Product Form
       {
         path: '/products',
         element: (
@@ -127,6 +134,24 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: '/products/new',
+        element: (
+          <ProtectedRoute allowedRoles={['admin']}>
+            <SuspensePage><ProductFormPage /></SuspensePage>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/products/:id/edit',
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'staff']}>
+            <SuspensePage><ProductFormPage /></SuspensePage>
+          </ProtectedRoute>
+        ),
+      },
+
+      // Plans & Plan Form
+      {
         path: '/plans',
         element: (
           <ProtectedRoute allowedRoles={['admin', 'staff']}>
@@ -135,6 +160,24 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: '/plans/new',
+        element: (
+          <ProtectedRoute allowedRoles={['admin']}>
+            <SuspensePage><PlanFormPage /></SuspensePage>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/plans/:id/edit',
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'staff']}>
+            <SuspensePage><PlanFormPage /></SuspensePage>
+          </ProtectedRoute>
+        ),
+      },
+
+      // Quotations
+      {
         path: '/quotations',
         element: (
           <ProtectedRoute allowedRoles={['admin', 'staff']}>
@@ -142,6 +185,8 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+
+      // Subscriptions
       {
         path: '/subscriptions',
         element: (
@@ -150,6 +195,8 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+
+      // Invoices
       {
         path: '/invoices',
         element: (
@@ -158,6 +205,8 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+
+      // Payments
       {
         path: '/payments',
         element: (
@@ -166,6 +215,8 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+
+      // Reports
       {
         path: '/reports',
         element: (

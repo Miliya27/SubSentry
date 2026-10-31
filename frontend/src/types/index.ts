@@ -4,6 +4,9 @@
  */
 
 export * from './auth';
+export * from './product';
+export * from './plan';
+import type { Plan } from './plan';
 
 // ─── API Response & Error Envelopes ─────────────────────────────────────────
 export interface ApiFieldError {
@@ -103,29 +106,6 @@ export interface Customer {
   };
 }
 
-export interface Plan {
-  id: number | string;
-  name: string;
-  description?: string;
-  price: string | number;
-  billing_frequency?: BillingFrequency;
-  billing_interval?: BillingInterval;
-  features?: string[];
-  is_active: boolean;
-  allow_pause?: boolean;
-  allow_renewal?: boolean;
-  allow_early_close?: boolean;
-  created_at?: string;
-}
-
-export interface Product {
-  id: number | string;
-  name: string;
-  description?: string;
-  unit_price: string | number;
-  is_active: boolean;
-  created_at?: string;
-}
 
 export interface Subscription {
   id: number | string;

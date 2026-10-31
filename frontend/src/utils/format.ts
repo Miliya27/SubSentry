@@ -1,24 +1,40 @@
 /**
  * src/utils/format.ts
- * Formatting utilities – currency (INR) and date helpers.
+ * Formatting utilities – currency (INR), money formatting, and date helpers.
  */
 
 /**
- * Format a number as Indian Rupees using the en-IN locale.
- * e.g. 125000 → "₹1,25,000.00"
+ * Format a number or string as Indian Rupees using the en-IN locale.
+ * e.g. 125000 or "125000.00" → "₹1,25,000.00"
  */
-export function formatCurrency(amount: number, currency = 'INR'): string {
+export function formatCurrency(
+  amount: number | string | null | undefined,
+  currency = 'INR'
+): string {
+  if (amount == null || amount === '') return '₹0.00';
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+  if (isNaN(num)) return '₹0.00';
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(amount);
+  }).format(num);
+}
+
+/**
+ * Format numeric input into a two-decimal JSON string for API payloads.
+ * e.g. 2000 -> "2000.00", "560" -> "560.00"
+ */
+export function toMoneyString(val: number | string | null | undefined): string {
+  if (val == null || val === '') return '0.00';
+  const num = typeof val === 'string' ? parseFloat(val) : val;
+  return isNaN(num) ? '0.00' : num.toFixed(2);
 }
 
 /**
  * Format an ISO date string to a readable date.
- * e.g. "2024-03-15T00:00:00Z" → "15 Mar 2024"
+ * e.g. "2024-03-15T00:00:00Z" or "2024-03-15" → "15 Mar 2024"
  */
 export function formatDate(
   dateString: string | null | undefined,
