@@ -88,6 +88,12 @@ class TaxAppliesToEnum(str, enum.Enum):
     hsn = "hsn"
 
 
+class ProductTypeEnum(str, enum.Enum):
+    service = "service"
+    software = "software"
+    addon = "addon"
+
+
 class EmailModeEnum(str, enum.Enum):
     console = "console"
     smtp = "smtp"
@@ -175,9 +181,16 @@ class Product(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    product_type: Mapped[ProductTypeEnum] = mapped_column(
+        Enum(ProductTypeEnum, name="producttypeenum"), nullable=False, default=ProductTypeEnum.software
+    )
+    sales_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0.00"))
+    cost_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0.00"))
+    # Optional legacy / supplementary fields
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     unit: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     hsn_code: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -193,12 +206,12 @@ class ProductVariant(Base):
     product_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    brand: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    # attribute/value describe the dimension of the variant (e.g. Brand / Odoo)
+    attribute: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g. "Brand"
+    value: Mapped[str] = mapped_column(String(100), nullable=False)       # e.g. "Odoo"
+    # extra_price is added to product.sales_price to give the final price
+    extra_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0.00"))
     sku: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, unique=True)
-    # price_override is the delta added to the base plan price (e.g. +560 for Odoo brand)
-    price_override: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0.00"))
-    attributes: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -240,12 +253,22 @@ class TaxRule(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    rate: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)  # e.g. 18.00 for 18%
-    applies_to: Mapped[TaxAppliesToEnum] = mapped_column(
-        Enum(TaxAppliesToEnum, name="taxappliestoenum"), nullable=False, default=TaxAppliesToEnum.all
+    rate_percent: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)  # 0.00 to 100.00
+    is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # Optional supplementary fields
+    applies_to: Mapped[Optional[TaxAppliesToEnum]] = mapped_column(
+        Enum(TaxAppliesToEnum, name="taxappliestoenum"), nullable=True, default=TaxAppliesToEnum.all
     )
     hsn_code: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    @property
+    def rate(self) -> Decimal:
+        return self.rate_percent
+
+    @rate.setter
+    def rate(self, value: Decimal):
+        self.rate_percent = value
 
 
 class DiscountRule(Base):

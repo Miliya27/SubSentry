@@ -77,7 +77,11 @@
 |---|---|---|---|---|
 | `id` | INTEGER | NOT NULL | autoincrement | PK |
 | `name` | VARCHAR(255) | NOT NULL | — | |
-| `description` | TEXT | NULL | — | |
+| `product_type` | ENUM(`producttypeenum`) | NOT NULL | `software` | `service|software|addon` |
+| `sales_price` | NUMERIC(12,2) | NOT NULL | `0.00` | Base selling price |
+| `cost_price` | NUMERIC(12,2) | NOT NULL | `0.00` | Cost price |
+| `notes` | TEXT | NULL | — | Optional notes |
+| `description` | TEXT | NULL | — | Optional extra |
 | `unit` | VARCHAR(50) | NULL | — | e.g. `license`, `module` |
 | `hsn_code` | VARCHAR(20) | NULL | — | Indian HSN classification |
 | `is_active` | BOOLEAN | NOT NULL | `true` | soft-delete flag |
@@ -91,11 +95,10 @@
 |---|---|---|---|---|
 | `id` | INTEGER | NOT NULL | autoincrement | PK |
 | `product_id` | INTEGER | NOT NULL | — | FK → `products.id` CASCADE, indexed |
-| `name` | VARCHAR(255) | NOT NULL | — | |
-| `brand` | VARCHAR(100) | NULL | — | e.g. `Odoo` |
-| `sku` | VARCHAR(100) | NULL | — | UNIQUE |
-| `price_override` | NUMERIC(12,2) | NOT NULL | `0.00` | Delta added to plan base price |
-| `attributes` | JSON | NULL | — | Arbitrary key-value bag |
+| `attribute` | VARCHAR(100) | NOT NULL | — | Dimension name e.g. `Brand` |
+| `value` | VARCHAR(100) | NOT NULL | — | Dimension value e.g. `Odoo` |
+| `extra_price` | NUMERIC(12,2) | NOT NULL | `0.00` | Price delta added to product sales_price |
+| `sku` | VARCHAR(100) | NULL | — | UNIQUE (when provided) |
 | `is_active` | BOOLEAN | NOT NULL | `true` | |
 | `created_at` | DATETIME(tz) | NOT NULL | `now()` | |
 
@@ -107,13 +110,19 @@
 |---|---|---|---|---|
 | `id` | INTEGER | NOT NULL | autoincrement | PK |
 | `name` | VARCHAR(255) | NOT NULL | — | |
-| `billing_cycle` | ENUM(`billingcycleenum`) | NOT NULL | — | ⚠ see Reconciliation |
+| `product_id` | INTEGER | NULL | — | FK → `products.id` RESTRICT, indexed |
+| `billing_frequency` | ENUM(`billingfrequencyenum`) | NOT NULL | — | `daily|weekly|monthly|yearly` |
 | `price` | NUMERIC(12,2) | NOT NULL | — | Base price per cycle |
+| `min_quantity` | INTEGER | NOT NULL | `1` | Minimum units required |
 | `trial_days` | INTEGER | NOT NULL | `0` | |
+| `available_from` | DATE | NULL | — | |
+| `available_until` | DATE | NULL | — | Must be ≥ available_from if set |
+| `auto_close_days` | INTEGER | NULL | — | |
+| `allow_early_close` | BOOLEAN | NOT NULL | `true` | |
+| `allow_pause` | BOOLEAN | NOT NULL | `true` | |
+| `allow_renewal` | BOOLEAN | NOT NULL | `true` | |
 | `is_active` | BOOLEAN | NOT NULL | `true` | |
 | `created_at` | DATETIME(tz) | NOT NULL | `now()` | |
-
-> ⚠ **Missing columns** (needed per contract): `product_id` FK, `min_quantity`, `available_from`, `available_until`, `auto_close_days`, `allow_early_close`, `allow_pause`, `allow_renewal`. See [Reconciliation](#reconciliation).
 
 ---
 
@@ -123,10 +132,11 @@
 |---|---|---|---|---|
 | `id` | INTEGER | NOT NULL | autoincrement | PK |
 | `name` | VARCHAR(100) | NOT NULL | — | e.g. `GST 18%` |
-| `rate` | NUMERIC(5,2) | NOT NULL | — | Percentage, e.g. `18.00` |
-| `applies_to` | ENUM(`taxappliestoenum`) | NOT NULL | `all` | `all\|product\|hsn` |
+| `rate_percent` | NUMERIC(5,2) | NOT NULL | — | Percentage, e.g. `18.00` |
+| `is_default` | BOOLEAN | NOT NULL | `false` | Default tax rule flag |
+| `is_active` | BOOLEAN | NOT NULL | `true` | soft-delete flag |
+| `applies_to` | ENUM(`taxappliestoenum`) | NULL | `all` | `all|product|hsn` |
 | `hsn_code` | VARCHAR(20) | NULL | — | Used when `applies_to = hsn` |
-| `is_active` | BOOLEAN | NOT NULL | `true` | |
 
 ---
 
@@ -388,6 +398,10 @@ erDiagram
     products {
         int id PK
         string name
+        string product_type
+        numeric sales_price
+        numeric cost_price
+        text notes
         text description
         string unit
         string hsn_code
@@ -397,30 +411,38 @@ erDiagram
     product_variants {
         int id PK
         int product_id FK
-        string name
-        string brand
+        string attribute
+        string value
+        numeric extra_price
         string sku
-        numeric price_override
-        json attributes
         bool is_active
         datetime created_at
     }
     plans {
         int id PK
         string name
-        string billing_cycle
+        int product_id FK
+        string billing_frequency
         numeric price
+        int min_quantity
         int trial_days
+        date available_from
+        date available_until
+        int auto_close_days
+        bool allow_early_close
+        bool allow_pause
+        bool allow_renewal
         bool is_active
         datetime created_at
     }
     tax_rules {
         int id PK
         string name
-        numeric rate
+        numeric rate_percent
+        bool is_default
+        bool is_active
         string applies_to
         string hsn_code
-        bool is_active
     }
     discount_rules {
         int id PK
