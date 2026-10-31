@@ -525,37 +525,39 @@ Create a customer profile for an existing user.
     {
       "id": 1,
       "name": "ERP Software License",
+      "product_type": "software",
+      "sales_price": "2000.00",
+      "cost_price": "0.00",
       "description": "Enterprise resource planning software subscription",
       "unit": "license",
       "hsn_code": "998314",
+      "notes": "Main license",
       "is_active": true,
       "created_at": "2026-10-31T04:00:00Z",
       "variants": [
         {
           "id": 1,
           "product_id": 1,
-          "name": "Standard Edition",
-          "brand": null,
+          "attribute": "Edition",
+          "value": "Standard",
+          "extra_price": "0.00",
           "sku": "ERP-STD-001",
-          "price_override": "0.00",
-          "attributes": { "edition": "standard" },
           "is_active": true
         },
         {
           "id": 2,
           "product_id": 1,
-          "name": "Odoo Edition",
-          "brand": "Odoo",
+          "attribute": "Brand",
+          "value": "Odoo",
+          "extra_price": "560.00",
           "sku": "ERP-ODOO-001",
-          "price_override": "560.00",
-          "attributes": { "edition": "odoo", "brand": "Odoo" },
           "is_active": true
         }
       ]
     }
   ],
   "message": "OK",
-  "meta": { "page": 1, "page_size": 20, "total": 2 }
+  "meta": { "page": 1, "page_size": 20, "total": 1 }
 }
 ```
 
@@ -567,11 +569,26 @@ Create a customer profile for an existing user.
 ```json
 {
   "name": "ERP Software License",
+  "product_type": "software",
+  "sales_price": "2000.00",
+  "cost_price": "0.00",
+  "notes": "Main license",
   "description": "Enterprise resource planning software subscription",
   "unit": "license",
   "hsn_code": "998314"
 }
 ```
+
+| Field | Type | Rules |
+|---|---|---|
+| `name` ✅ | string | 1–255 chars |
+| `product_type` ❓ | enum | `service|software|addon`, default `software` |
+| `sales_price` ❓ | string/number | numeric, ≥ 0.00, default `0.00` |
+| `cost_price` ❓ | string/number | numeric, ≥ 0.00, default `0.00` |
+| `notes` ❓ | string|null | optional notes |
+| `description` ❓ | string|null | optional extra |
+| `unit` ❓ | string|null | max 50 chars |
+| `hsn_code` ❓ | string|null | max 20 chars |
 
 **Response 201:** Product object (variants array empty initially)
 
@@ -589,7 +606,7 @@ Create a customer profile for an existing user.
 
 #### PUT `/products/{id}` 🔒 admin
 
-**Request body** (all fields optional): same fields as POST
+**Request body** (all fields optional): same fields as POST plus `is_active` (boolean)
 
 **Response 200:** Updated product object
 
@@ -619,13 +636,19 @@ Soft-delete (sets `is_active = false`).
 **Request body:**
 ```json
 {
-  "name": "Odoo Edition",
-  "brand": "Odoo",
-  "sku": "ERP-ODOO-001",
-  "price_override": "560.00",
-  "attributes": { "edition": "odoo" }
+  "attribute": "Brand",
+  "value": "Odoo",
+  "extra_price": "560.00",
+  "sku": "ERP-ODOO-001"
 }
 ```
+
+| Field | Type | Rules |
+|---|---|---|
+| `attribute` ✅ | string | 1–100 chars (e.g. `Brand`) |
+| `value` ✅ | string | 1–100 chars (e.g. `Odoo`) |
+| `extra_price` ❓ | string/number | numeric, ≥ 0.00, default `0.00` |
+| `sku` ❓ | string|null | unique when provided, max 100 chars |
 
 **Response 201:** Variant object
 
@@ -635,7 +658,7 @@ Soft-delete (sets `is_active = false`).
 
 #### PUT `/variants/{id}` 🔒 admin
 
-Update a variant. All body fields optional (same as POST).
+Update a variant. All body fields optional (same as POST) plus `is_active` (boolean).
 
 **Response 200:** Updated variant object
 
@@ -654,11 +677,11 @@ Soft-delete variant (`is_active = false`).
 
 #### GET `/products/{id}/price` 🔒 any auth
 
-Compute the final per-unit price for a product + optional variant on a given plan.
+Compute the final per-unit price for a product + optional variant.
+Final price = `product.sales_price + variant.extra_price` (e.g. 2000.00 + 560.00 = 2560.00).
 
 **Query params:**
 - `variant_id` ❓ integer
-- `plan_id` ✅ integer
 
 **Response 200:**
 ```json
@@ -667,10 +690,9 @@ Compute the final per-unit price for a product + optional variant on a given pla
   "data": {
     "product_id": 1,
     "variant_id": 2,
-    "plan_id": 1,
-    "base_price": "2999.00",
-    "price_override": "560.00",
-    "final_price": "3559.00"
+    "sales_price": "2000.00",
+    "extra_price": "560.00",
+    "final_price": "2560.00"
   },
   "message": "OK"
 }
@@ -745,7 +767,7 @@ Compute the final per-unit price for a product + optional variant on a given pla
 | `min_quantity` ✅ | integer | ≥ 1 |
 | `trial_days` ❓ | integer | ≥ 0, default 0 |
 | `available_from` ❓ | date | — |
-| `available_until` ❓ | date | must be > `available_from` if set |
+| `available_until` ❓ | date | must be ≥ `available_from` if set |
 | `auto_close_days` ❓ | integer\|null | ≥ 1 |
 | `allow_early_close` ❓ | boolean | default `true` |
 | `allow_pause` ❓ | boolean | default `true` |
@@ -1299,6 +1321,8 @@ Returns all data needed to render a print-ready invoice (for PDF generation on t
 
 #### GET `/taxes` 🔒 any auth
 
+**Query params:** `page`, `page_size`, `q`, `is_active`, `is_default`
+
 **Response 200:**
 ```json
 {
@@ -1307,10 +1331,12 @@ Returns all data needed to render a print-ready invoice (for PDF generation on t
     {
       "id": 1,
       "name": "GST 18%",
+      "rate_percent": "18.00",
       "rate": "18.00",
+      "is_default": true,
+      "is_active": true,
       "applies_to": "all",
-      "hsn_code": null,
-      "is_active": true
+      "hsn_code": null
     }
   ],
   "message": "OK",
@@ -1326,18 +1352,18 @@ Returns all data needed to render a print-ready invoice (for PDF generation on t
 ```json
 {
   "name": "GST 18%",
-  "rate": "18.00",
-  "applies_to": "all",
-  "hsn_code": null
+  "rate_percent": "18.00",
+  "is_default": true
 }
 ```
 
 | Field | Type | Rules |
 |---|---|---|
 | `name` ✅ | string | 1–100 chars |
-| `rate` ✅ | string | 0.00–100.00 |
-| `applies_to` ✅ | enum | `all\|product\|hsn` |
-| `hsn_code` ❓ | string\|null | required when `applies_to = hsn` |
+| `rate_percent` ✅ | string/number | 0.00–100.00 (or `rate` for backwards compatibility) |
+| `is_default` ❓ | boolean | default `false` |
+| `applies_to` ❓ | enum | `all|product|hsn`, default `all` |
+| `hsn_code` ❓ | string|null | required when `applies_to = hsn` |
 
 **Response 201:** Tax rule object
 
@@ -1345,7 +1371,7 @@ Returns all data needed to render a print-ready invoice (for PDF generation on t
 
 #### PUT `/taxes/{id}` 🔒 admin
 
-All fields optional. Returns updated tax rule.
+All fields optional (same as POST) plus `is_active` (boolean). Returns updated tax rule.
 
 ---
 

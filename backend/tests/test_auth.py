@@ -7,44 +7,10 @@ from __future__ import annotations
 import pytest
 from datetime import datetime, timedelta, timezone
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
-from app.database.session import Base, get_db
 from app.main import app
-
-# ---------------------------------------------------------------------------
-# In-memory SQLite test database
-# ---------------------------------------------------------------------------
-
-TEST_DATABASE_URL = "sqlite:///./test_subsentry.db"
-
-engine_test = create_engine(
-    TEST_DATABASE_URL, connect_args={"check_same_thread": False}
-)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine_test)
-
-
-def override_get_db():
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-app.dependency_overrides[get_db] = override_get_db
-
-
-@pytest.fixture(autouse=True, scope="function")
-def reset_db():
-    """Drop and recreate all tables before each test for isolation."""
-    # Import models so metadata is populated
-    import app.models.models  # noqa: F401
-    Base.metadata.drop_all(bind=engine_test)
-    Base.metadata.create_all(bind=engine_test)
-    yield
-    Base.metadata.drop_all(bind=engine_test)
+# DB setup (engine, override, table reset) lives in tests/conftest.py
+from tests.conftest import TestingSessionLocal
 
 
 @pytest.fixture

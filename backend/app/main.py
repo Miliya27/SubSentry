@@ -26,6 +26,9 @@ import app.models.models  # noqa: F401
 from app.database.session import Base
 from app.routes import auth as auth_router
 from app.routes import users as users_router
+from app.routes import products as products_router
+from app.routes import plans as plans_router
+from app.routes import taxes as taxes_router
 
 logger = logging.getLogger(__name__)
 
@@ -142,6 +145,9 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 app.include_router(auth_router.router, prefix="/api/v1")
 app.include_router(users_router.router, prefix="/api/v1")
+app.include_router(products_router.router, prefix="/api/v1")
+app.include_router(plans_router.router, prefix="/api/v1")
+app.include_router(taxes_router.router, prefix="/api/v1")
 
 
 @app.get(

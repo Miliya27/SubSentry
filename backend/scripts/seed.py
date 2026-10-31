@@ -68,39 +68,44 @@ USERS = [
 PRODUCTS = [
     {
         "name": "ERP Software License",
+        "product_type": "software",
+        "sales_price": Decimal("2000.00"),
+        "cost_price": Decimal("0.00"),
         "description": "Enterprise resource planning software subscription",
         "unit": "license",
         "hsn_code": "998314",
+        "notes": "Standard ERP product with variants",
         "variants": [
             {
-                "name": "Standard Edition",
-                "brand": None,
+                "attribute": "Edition",
+                "value": "Standard",
+                "extra_price": Decimal("0.00"),
                 "sku": "ERP-STD-001",
-                "price_override": Decimal("0.00"),
-                "attributes": {"edition": "standard"},
             },
             {
-                "name": "Odoo Edition",
-                "brand": "Odoo",
+                "attribute": "Brand",
+                "value": "Odoo",
+                # Odoo brand costs +560 over sales_price
+                "extra_price": Decimal("560.00"),
                 "sku": "ERP-ODOO-001",
-                # Odoo brand variant costs +560 over base plan price
-                "price_override": Decimal("560.00"),
-                "attributes": {"edition": "odoo", "brand": "Odoo"},
             },
         ],
     },
     {
         "name": "CRM Module",
+        "product_type": "addon",
+        "sales_price": Decimal("999.00"),
+        "cost_price": Decimal("0.00"),
         "description": "Customer relationship management add-on",
         "unit": "module",
         "hsn_code": "998315",
+        "notes": "CRM add-on for ERP",
         "variants": [
             {
-                "name": "Basic CRM",
-                "brand": None,
+                "attribute": "Tier",
+                "value": "Basic",
+                "extra_price": Decimal("0.00"),
                 "sku": "CRM-BASIC-001",
-                "price_override": Decimal("0.00"),
-                "attributes": {"tier": "basic"},
             },
         ],
     },
@@ -142,7 +147,9 @@ PLANS = [
 TAX_RULES = [
     {
         "name": "GST 18%",
-        "rate": Decimal("18.00"),
+        "rate_percent": Decimal("18.00"),
+        "is_default": True,
+        "is_active": True,
         "applies_to": TaxAppliesToEnum.all,
         "hsn_code": None,
     },
@@ -187,9 +194,13 @@ def get_or_create_product(db: Session, data: dict) -> tuple[Product, bool]:
         return existing, False
     product = Product(
         name=data["name"],
-        description=data["description"],
-        unit=data["unit"],
-        hsn_code=data["hsn_code"],
+        product_type=data["product_type"],
+        sales_price=data["sales_price"],
+        cost_price=data.get("cost_price", Decimal("0.00")),
+        description=data.get("description"),
+        unit=data.get("unit"),
+        hsn_code=data.get("hsn_code"),
+        notes=data.get("notes"),
     )
     db.add(product)
     db.flush()
@@ -197,16 +208,19 @@ def get_or_create_product(db: Session, data: dict) -> tuple[Product, bool]:
 
 
 def get_or_create_variant(db: Session, product: Product, v: dict) -> tuple[ProductVariant, bool]:
-    existing = db.query(ProductVariant).filter(ProductVariant.sku == v["sku"]).first()
+    existing = db.query(ProductVariant).filter(
+        ProductVariant.product_id == product.id,
+        ProductVariant.attribute == v["attribute"],
+        ProductVariant.value == v["value"],
+    ).first()
     if existing:
         return existing, False
     variant = ProductVariant(
         product_id=product.id,
-        name=v["name"],
-        brand=v.get("brand"),
-        sku=v["sku"],
-        price_override=v["price_override"],
-        attributes=v.get("attributes"),
+        attribute=v["attribute"],
+        value=v["value"],
+        extra_price=v.get("extra_price", Decimal("0.00")),
+        sku=v.get("sku"),
     )
     db.add(variant)
     db.flush()
@@ -243,7 +257,7 @@ def seed():
 
     db: Session = SessionLocal()
     try:
-        print("── Users ─────────────────────────────────────────────────────")
+        print("-- Users -----------------------------------------------------")
         customer_user: User | None = None
         for u_data in USERS:
             user, created = get_or_create_user(db, u_data)
@@ -255,7 +269,7 @@ def seed():
                 customer_user = user
                 cust, _ = get_or_create_customer(db, user)
 
-        print("\n── Products & Variants ───────────────────────────────────────")
+        print("\n-- Products & Variants ---------------------------------------")
         for p_data in PRODUCTS:
             variants = p_data.pop("variants")
             product, created = get_or_create_product(db, p_data)
@@ -265,22 +279,28 @@ def seed():
             for v in variants:
                 variant, v_created = get_or_create_variant(db, product, v)
                 v_status = "CREATED" if v_created else "EXISTS "
-                print(f"    [{v_status}] Variant: {variant.name}  price_override={variant.price_override}")
+                print(f"    [{v_status}] Variant: {variant.attribute}={variant.value}  extra_price={variant.extra_price}")
 
-        print("\n── Plans ─────────────────────────────────────────────────────")
+        # Find ERP Software License to associate plans with
+        erp_product = db.query(Product).filter(Product.name == "ERP Software License").first()
+        erp_product_id = erp_product.id if erp_product else None
+
+        print("\n-- Plans -----------------------------------------------------")
         for p_data in PLANS:
+            if erp_product_id and "product_id" not in p_data:
+                p_data["product_id"] = erp_product_id
             plan, created = get_or_create_plan(db, p_data)
             status = "CREATED" if created else "EXISTS "
-            print(f"  [{status}] {plan.name}  ({plan.billing_frequency.value}) ₹{plan.price}")
+            print(f"  [{status}] {plan.name}  ({plan.billing_frequency.value}) INR {plan.price}")
 
-        print("\n── Tax Rules ─────────────────────────────────────────────────")
+        print("\n-- Tax Rules -------------------------------------------------")
         for t_data in TAX_RULES:
             rule, created = get_or_create_tax_rule(db, t_data)
             status = "CREATED" if created else "EXISTS "
-            print(f"  [{status}] {rule.name}  rate={rule.rate}%")
+            print(f"  [{status}] {rule.name}  rate_percent={rule.rate_percent}%  default={rule.is_default}")
 
         db.commit()
-        print("\n✓ Seed completed successfully.\n")
+        print("\n[OK] Seed completed successfully.\n")
 
     except Exception:
         db.rollback()
