@@ -19,8 +19,8 @@ export const MOCK_CUSTOMERS: Customer[] = [
 
 export const MOCK_SUBSCRIPTIONS: Subscription[] = [
   { id: 's1', customer_id: 'c1', plan_id: 'p1', status: 'active',    amount: 4999, start_date: '2024-01-10T00:00:00Z', created_at: '2024-01-10T00:00:00Z', updated_at: '2024-06-01T00:00:00Z' },
-  { id: 's2', customer_id: 'c2', plan_id: 'p2', status: 'trialing',  amount: 1999, start_date: '2024-07-01T00:00:00Z', trial_end_date: '2024-07-15T00:00:00Z', created_at: '2024-07-01T00:00:00Z', updated_at: '2024-07-05T00:00:00Z' },
-  { id: 's3', customer_id: 'c1', plan_id: 'p1', status: 'cancelled', amount: 4999, start_date: '2023-06-01T00:00:00Z', end_date: '2024-01-09T00:00:00Z', created_at: '2023-06-01T00:00:00Z', updated_at: '2024-01-09T00:00:00Z' },
+  { id: 's2', customer_id: 'c2', plan_id: 'p2', status: 'paused',    amount: 1999, start_date: '2024-07-01T00:00:00Z', created_at: '2024-07-01T00:00:00Z', updated_at: '2024-07-05T00:00:00Z' },
+  { id: 's3', customer_id: 'c1', plan_id: 'p1', status: 'closed',    amount: 4999, start_date: '2023-06-01T00:00:00Z', end_date: '2024-01-09T00:00:00Z', created_at: '2023-06-01T00:00:00Z', updated_at: '2024-01-09T00:00:00Z' },
 ];
 
 export const MOCK_INVOICES: Invoice[] = [
@@ -29,5 +29,5 @@ export const MOCK_INVOICES: Invoice[] = [
 ];
 
 export const MOCK_PAYMENTS: Payment[] = [
-  { id: 'pay1', invoice_id: 'i1', amount: 5898, status: 'completed', payment_method: 'UPI', transaction_id: 'TXN123456', paid_at: '2024-06-10T10:30:00Z', created_at: '2024-06-10T10:30:00Z' },
+  { id: 'pay1', invoice_id: 'i1', amount: 5898, payment_method: 'upi', transaction_id: 'TXN123456', paid_at: '2024-06-10T10:30:00Z', created_at: '2024-06-10T10:30:00Z' },
 ];
