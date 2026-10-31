@@ -17,12 +17,15 @@ from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config import settings
 from app.database.session import engine
 # Import all models so SQLAlchemy's metadata is populated before create_all.
 import app.models.models  # noqa: F401
 from app.database.session import Base
+from app.routes import auth as auth_router
+from app.routes import users as users_router
 
 logger = logging.getLogger(__name__)
 
@@ -83,15 +86,39 @@ def _error_body(code: str, message: str, details=None) -> dict:
 # Global exception handlers
 # ---------------------------------------------------------------------------
 
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """
+    When routes raise HTTPException(detail={...}), return that dict directly
+    so callers receive our standard error envelope, not FastAPI's
+    default {"detail": ...} wrapper.
+    """
+    if isinstance(exc.detail, dict):
+        return JSONResponse(status_code=exc.status_code, content=exc.detail)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=_error_body("HTTP_ERROR", str(exc.detail)),
+    )
+
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """Pydantic / query-param validation failures → 422 VALIDATION_ERROR."""
+    # exc.errors() may contain non-serializable objects (e.g. ValueError) in
+    # the `ctx` field.  Strip ctx and serialize loc/msg/type only.
+    details = [
+        {
+            "field": ".".join(str(p) for p in e.get("loc", [])),
+            "message": e.get("msg", ""),
+        }
+        for e in exc.errors()
+    ]
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content=_error_body(
             code="VALIDATION_ERROR",
             message="Request validation failed.",
-            details=exc.errors(),
+            details=details,
         ),
     )
 
@@ -112,6 +139,10 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
+
+app.include_router(auth_router.router, prefix="/api/v1")
+app.include_router(users_router.router, prefix="/api/v1")
+
 
 @app.get(
     "/api/v1/health",
