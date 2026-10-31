@@ -24,20 +24,30 @@ const ResetPasswordPage  = lazy(() => import('./pages/ResetPasswordPage'));
 // ─── Lazy-loaded App Pages ─────────────────────────────────────────────────
 const DashboardPage       = lazy(() => import('./pages/DashboardPage'));
 const CustomersPage       = lazy(() => import('./pages/CustomersPage'));
+const CustomerFormPage    = lazy(() => import('./pages/CustomerFormPage'));
 const ProductsPage        = lazy(() => import('./pages/ProductsPage'));
 const ProductFormPage     = lazy(() => import('./pages/ProductFormPage'));
 const PlansPage           = lazy(() => import('./pages/PlansPage'));
 const PlanFormPage        = lazy(() => import('./pages/PlanFormPage'));
 const QuotationsPage      = lazy(() => import('./pages/QuotationsPage'));
+const QuotationTemplatesPage = lazy(() => import('./pages/QuotationTemplatesPage'));
+const TemplateFormPage    = lazy(() => import('./pages/TemplateFormPage'));
 const SubscriptionsPage   = lazy(() => import('./pages/SubscriptionsPage'));
+const SubscriptionFormPage = lazy(() => import('./pages/SubscriptionFormPage'));
+const SubscriptionDetailPage = lazy(() => import('./pages/SubscriptionDetailPage'));
 const InvoicesPage        = lazy(() => import('./pages/InvoicesPage'));
+const InvoiceDetailPage  = lazy(() => import('./pages/InvoiceDetailPage'));
+const InvoicePrintPage   = lazy(() => import('./pages/InvoicePrintPage'));
+const BillingRunPage     = lazy(() => import('./pages/BillingRunPage'));
 const PaymentsPage        = lazy(() => import('./pages/PaymentsPage'));
 const DiscountsPage       = lazy(() => import('./pages/DiscountsPage'));
+const DiscountFormPage   = lazy(() => import('./pages/DiscountFormPage'));
 const TaxesPage           = lazy(() => import('./pages/TaxesPage'));
 const ReportsPage         = lazy(() => import('./pages/ReportsPage'));
 const SettingsPage        = lazy(() => import('./pages/SettingsPage'));
 const MySubscriptionsPage = lazy(() => import('./pages/MySubscriptionsPage'));
 const MyInvoicesPage      = lazy(() => import('./pages/MyInvoicesPage'));
+const CustomerPortalPage  = lazy(() => import('./pages/CustomerPortalPage'));
 const NotFoundPage        = lazy(() => import('./pages/NotFoundPage'));
 
 // ─── Suspense wrapper ───────────────────────────────────────────────────────
@@ -49,14 +59,9 @@ function SuspensePage({ children }: { children: React.ReactNode }) {
 function IndexRedirect() {
   const { user } = useAuth();
   if (user?.role === 'customer') {
-    return <Navigate to="/my/subscriptions" replace />;
+    return <Navigate to="/portal" replace />;
   }
   return <Navigate to="/dashboard" replace />;
-}
-
-// ─── Customer Portal Redirection ───────────────────────────────────────────
-function CustomerPortalRedirect() {
-  return <Navigate to="/my/subscriptions" replace />;
 }
 
 // ─── Router ─────────────────────────────────────────────────────────────────
@@ -82,16 +87,6 @@ const router = createBrowserRouter([
         element: <SuspensePage><ResetPasswordPage /></SuspensePage>,
       },
     ],
-  },
-
-  // ── Customer Portal alias (/portal) ───────────────────────────────────
-  {
-    path: '/portal',
-    element: (
-      <ProtectedRoute allowedRoles={['customer']}>
-        <CustomerPortalRedirect />
-      </ProtectedRoute>
-    ),
   },
 
   // ── Authenticated app routes ──────────────────────────────────────────
@@ -120,6 +115,22 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['admin', 'staff']}>
             <SuspensePage><CustomersPage /></SuspensePage>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/customers/new',
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'staff']}>
+            <SuspensePage><CustomerFormPage /></SuspensePage>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/customers/:id/edit',
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'staff']}>
+            <SuspensePage><CustomerFormPage /></SuspensePage>
           </ProtectedRoute>
         ),
       },
@@ -176,12 +187,36 @@ const router = createBrowserRouter([
         ),
       },
 
-      // Quotations
+      // Quotations & Quotation Templates
       {
         path: '/quotations',
         element: (
           <ProtectedRoute allowedRoles={['admin', 'staff']}>
             <SuspensePage><QuotationsPage /></SuspensePage>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/quotations/templates',
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'staff']}>
+            <SuspensePage><QuotationTemplatesPage /></SuspensePage>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/quotations/templates/new',
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'staff']}>
+            <SuspensePage><TemplateFormPage /></SuspensePage>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/quotations/templates/:id/edit',
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'staff']}>
+            <SuspensePage><TemplateFormPage /></SuspensePage>
           </ProtectedRoute>
         ),
       },
@@ -195,6 +230,22 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+      {
+        path: '/subscriptions/new',
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'staff']}>
+            <SuspensePage><SubscriptionFormPage /></SuspensePage>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/subscriptions/:id',
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'staff']}>
+            <SuspensePage><SubscriptionDetailPage /></SuspensePage>
+          </ProtectedRoute>
+        ),
+      },
 
       // Invoices
       {
@@ -202,6 +253,30 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['admin', 'staff']}>
             <SuspensePage><InvoicesPage /></SuspensePage>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/invoices/:id',
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'staff']}>
+            <SuspensePage><InvoiceDetailPage /></SuspensePage>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/invoices/:id/print',
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'staff', 'customer']}>
+            <SuspensePage><InvoicePrintPage /></SuspensePage>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/billing/run',
+        element: (
+          <ProtectedRoute allowedRoles={['admin']}>
+            <SuspensePage><BillingRunPage /></SuspensePage>
           </ProtectedRoute>
         ),
       },
@@ -236,6 +311,22 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: '/discounts/new',
+        element: (
+          <ProtectedRoute allowedRoles={['admin']}>
+            <SuspensePage><DiscountFormPage /></SuspensePage>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/discounts/:id/edit',
+        element: (
+          <ProtectedRoute allowedRoles={['admin']}>
+            <SuspensePage><DiscountFormPage /></SuspensePage>
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: '/taxes',
         element: (
           <ProtectedRoute allowedRoles={['admin']}>
@@ -266,6 +357,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['customer']}>
             <SuspensePage><MyInvoicesPage /></SuspensePage>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/portal',
+        element: (
+          <ProtectedRoute allowedRoles={['customer']}>
+            <SuspensePage><CustomerPortalPage /></SuspensePage>
           </ProtectedRoute>
         ),
       },

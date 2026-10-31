@@ -1,0 +1,62 @@
+/**
+ * src/styles/print.css
+ * Dedicated print styles for Invoice print view (A4 layout).
+ */
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 15mm 20mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 11pt !important;
+    line-height: 1.4 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide UI elements that shouldn't appear on paper */
+  .no-print,
+  nav,
+  header,
+  aside,
+  button,
+  .print-hide {
+    display: none !important;
+  }
+
+  /* Make containers fit A4 width without scrolling or truncation */
+  .print-container {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .print-break-inside-avoid {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  .print-table th,
+  .print-table td {
+    padding: 8px 10px !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+  }
+
+  .print-table th {
+    background-color: #f8fafc !important;
+    font-weight: 600 !important;
+    color: #475569 !important;
+  }
+}
