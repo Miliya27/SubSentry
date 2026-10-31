@@ -13,11 +13,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_user, require_role
+from app.core.deps import require_role
 from app.database.session import get_db
 from app.models.models import (
     Customer,
-    Plan,
     RoleEnum,
     Subscription,
     SubscriptionStatusEnum,
@@ -26,7 +25,6 @@ from app.models.models import (
 from app.schemas.dashboard import (
     CustomerDashboardOut,
     DashboardSummaryOut,
-    UpcomingRenewalItem,
 )
 from app.services.finance import (
     arr,
