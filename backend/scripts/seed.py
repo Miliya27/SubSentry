@@ -25,7 +25,7 @@ from app.models.models import (
     Plan,
     TaxRule,
     RoleEnum,
-    BillingCycleEnum,
+    BillingFrequencyEnum,
     TaxAppliesToEnum,
 )
 from passlib.context import CryptContext
@@ -109,21 +109,33 @@ PRODUCTS = [
 PLANS = [
     {
         "name": "Monthly Plan",
-        "billing_cycle": BillingCycleEnum.monthly,
+        "billing_frequency": BillingFrequencyEnum.monthly,
         "price": Decimal("2999.00"),
         "trial_days": 14,
+        "min_quantity": 1,
+        "allow_early_close": True,
+        "allow_pause": True,
+        "allow_renewal": True,
     },
     {
         "name": "Yearly Plan",
-        "billing_cycle": BillingCycleEnum.yearly,
+        "billing_frequency": BillingFrequencyEnum.yearly,
         "price": Decimal("29999.00"),
         "trial_days": 30,
+        "min_quantity": 1,
+        "allow_early_close": True,
+        "allow_pause": True,
+        "allow_renewal": True,
     },
     {
         "name": "Weekly Plan",
-        "billing_cycle": BillingCycleEnum.weekly,
+        "billing_frequency": BillingFrequencyEnum.weekly,
         "price": Decimal("799.00"),
         "trial_days": 7,
+        "min_quantity": 1,
+        "allow_early_close": True,
+        "allow_pause": True,
+        "allow_renewal": True,
     },
 ]
 
@@ -259,7 +271,7 @@ def seed():
         for p_data in PLANS:
             plan, created = get_or_create_plan(db, p_data)
             status = "CREATED" if created else "EXISTS "
-            print(f"  [{status}] {plan.name}  ({plan.billing_cycle.value}) ₹{plan.price}")
+            print(f"  [{status}] {plan.name}  ({plan.billing_frequency.value}) ₹{plan.price}")
 
         print("\n── Tax Rules ─────────────────────────────────────────────────")
         for t_data in TAX_RULES:

@@ -39,26 +39,27 @@ class RoleEnum(str, enum.Enum):
     customer = "customer"
 
 
-class BillingCycleEnum(str, enum.Enum):
+class BillingFrequencyEnum(str, enum.Enum):
+    daily = "daily"
+    weekly = "weekly"
     monthly = "monthly"
     yearly = "yearly"
-    weekly = "weekly"
 
 
 class SubscriptionStatusEnum(str, enum.Enum):
-    trial = "trial"
+    draft = "draft"
+    quotation = "quotation"
+    confirmed = "confirmed"
     active = "active"
     paused = "paused"
-    cancelled = "cancelled"
-    expired = "expired"
+    closed = "closed"
 
 
 class InvoiceStatusEnum(str, enum.Enum):
     draft = "draft"
-    sent = "sent"
+    confirmed = "confirmed"
     paid = "paid"
-    overdue = "overdue"
-    void = "void"
+    cancelled = "cancelled"
 
 
 class PaymentMethodEnum(str, enum.Enum):
@@ -77,8 +78,8 @@ class QuotationStatusEnum(str, enum.Enum):
 
 
 class DiscountTypeEnum(str, enum.Enum):
-    percentage = "percentage"
-    flat = "flat"
+    fixed = "fixed"
+    percent = "percent"
 
 
 class TaxAppliesToEnum(str, enum.Enum):
@@ -211,11 +212,21 @@ class Plan(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    billing_cycle: Mapped[BillingCycleEnum] = mapped_column(
-        Enum(BillingCycleEnum, name="billingcycleenum"), nullable=False
+    product_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("products.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    billing_frequency: Mapped[BillingFrequencyEnum] = mapped_column(
+        Enum(BillingFrequencyEnum, name="billingfrequencyenum"), nullable=False
     )
     price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    min_quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     trial_days: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    available_from: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    available_until: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    auto_close_days: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    allow_early_close: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    allow_pause: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    allow_renewal: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -317,10 +328,12 @@ class Subscription(Base):
     status: Mapped[SubscriptionStatusEnum] = mapped_column(
         Enum(SubscriptionStatusEnum, name="subscriptionstatusenum"),
         nullable=False,
-        default=SubscriptionStatusEnum.trial,
+        default=SubscriptionStatusEnum.draft,
         index=True,
     )
     start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    expiry_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    payment_terms_days: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     trial_end_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     next_billing_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True, index=True)
     cancelled_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
