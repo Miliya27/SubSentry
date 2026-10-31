@@ -1,203 +1,195 @@
 /**
  * src/types/index.ts
- * Central TypeScript type definitions derived from docs/API_CONTRACT.md
- * (contract was empty at scaffold time – types reflect task description enums)
+ * Central TypeScript type definitions reconciled with docs/API_CONTRACT.md (v1.1.0)
  */
 
-// ─── API Error Envelope ────────────────────────────────────────────────────
+export * from './auth';
+export * from './product';
+export * from './plan';
+import type { Plan } from './plan';
+
+// ─── API Response & Error Envelopes ─────────────────────────────────────────
+export interface ApiFieldError {
+  field: string;
+  message: string;
+}
+
 export interface ApiError {
-  detail: string;
-  code?: string;
-  field_errors?: Record<string, string[]>;
+  code: string;
+  message: string;
+  details?: ApiFieldError[] | null;
 }
 
 export interface ApiResponse<T> {
-  data: T;
+  success: boolean;
+  data?: T;
+  error?: ApiError;
   message?: string;
+  meta?: {
+    page: number;
+    page_size: number;
+    total: number;
+  };
+}
+
+export interface PaginatedMeta {
+  page: number;
+  page_size: number;
+  total: number;
 }
 
 export interface PaginatedResponse<T> {
-  items: T[];
-  total: number;
-  page: number;
-  page_size: number;
-  total_pages: number;
+  success: boolean;
+  data: T[];
+  message?: string;
+  meta: PaginatedMeta;
 }
 
-// ─── Auth ──────────────────────────────────────────────────────────────────
-export type UserRole = 'admin' | 'staff' | 'customer';
-
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: UserRole;
-}
-
-export interface AuthTokens {
-  access_token: string;
-  token_type: 'bearer';
-}
-
-// ─── Status Enums ──────────────────────────────────────────────────────────
-// Subscription statuses
+// ─── Real Status Enums from docs/API_CONTRACT.md ───────────────────────────
+// Subscription status: draft, quotation, confirmed, active, paused, closed
 export type SubscriptionStatus =
+  | 'draft'
+  | 'quotation'
+  | 'confirmed'
   | 'active'
   | 'paused'
-  | 'cancelled'
-  | 'expired'
-  | 'pending'
-  | 'trialing';
+  | 'closed';
 
-// Invoice statuses
+// Invoice status: draft, confirmed, paid, cancelled (+ derived overdue, partially_paid)
 export type InvoiceStatus =
   | 'draft'
-  | 'sent'
+  | 'confirmed'
   | 'paid'
+  | 'cancelled'
   | 'overdue'
-  | 'voided'
   | 'partially_paid';
 
-// Payment statuses
-export type PaymentStatus =
-  | 'pending'
-  | 'completed'
-  | 'failed'
-  | 'refunded'
-  | 'partially_refunded';
+// Billing frequency
+export type BillingFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly';
+export type BillingInterval = BillingFrequency; // alias for compatibility
 
-// Quotation statuses
-export type QuotationStatus =
-  | 'draft'
-  | 'sent'
-  | 'accepted'
-  | 'rejected'
-  | 'expired';
-
-// Plan billing intervals
-export type BillingInterval = 'monthly' | 'quarterly' | 'yearly' | 'custom';
+// Payment methods
+export type PaymentMethod =
+  | 'cash'
+  | 'bank_transfer'
+  | 'card'
+  | 'upi'
+  | 'cheque';
 
 // Discount types
-export type DiscountType = 'percentage' | 'fixed';
+export type DiscountType = 'fixed' | 'percent';
 
-// Tax types
-export type TaxType = 'gst' | 'igst' | 'vat' | 'custom';
+// Tax applies to
+export type TaxAppliesTo = 'all' | 'product' | 'hsn';
 
 // ─── Domain Models ─────────────────────────────────────────────────────────
 export interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  company?: string;
-  created_at: string;
-  updated_at: string;
+  id: number | string;
+  user_id?: number;
+  company_name?: string;
+  company?: string; // compatibility alias
+  name?: string; // fallback alias
+  email?: string;
+  phone?: string | null;
+  gstin?: string | null;
+  billing_address?: string | null;
+  shipping_address?: string | null;
+  credit_limit?: string | number;
+  outstanding_balance?: string | number;
+  created_at?: string;
+  updated_at?: string;
+  user?: {
+    id: number;
+    email: string;
+    full_name: string;
+    role: string;
+  };
 }
 
-export interface Plan {
-  id: string;
-  name: string;
-  description?: string;
-  price: number;
-  billing_interval: BillingInterval;
-  features: string[];
-  is_active: boolean;
-  created_at: string;
-}
-
-export interface Product {
-  id: string;
-  name: string;
-  description?: string;
-  unit_price: number;
-  is_active: boolean;
-  created_at: string;
-}
 
 export interface Subscription {
-  id: string;
-  customer_id: string;
+  id: number | string;
+  customer_id: number | string;
   customer?: Customer;
-  plan_id: string;
+  plan_id: number | string;
   plan?: Plan;
   status: SubscriptionStatus;
   start_date: string;
-  end_date?: string;
-  trial_end_date?: string;
-  next_billing_date?: string;
-  amount: number;
-  created_at: string;
-  updated_at: string;
+  end_date?: string | null;
+  next_billing_date?: string | null;
+  amount: string | number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Invoice {
-  id: string;
+  id: number | string;
   invoice_number: string;
-  customer_id: string;
+  customer_id: number | string;
   customer?: Customer;
-  subscription_id?: string;
+  subscription_id?: number | string | null;
   status: InvoiceStatus;
   issue_date: string;
   due_date: string;
-  subtotal: number;
-  tax_amount: number;
-  discount_amount: number;
-  total: number;
-  paid_amount: number;
+  subtotal: string | number;
+  tax_amount: string | number;
+  discount_amount: string | number;
+  total: string | number;
+  paid_amount: string | number;
   currency: string;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Payment {
-  id: string;
-  invoice_id: string;
+  id: number | string;
+  invoice_id: number | string;
   invoice?: Invoice;
-  amount: number;
-  status: PaymentStatus;
-  payment_method?: string;
-  transaction_id?: string;
+  amount: string | number;
+  payment_method?: PaymentMethod | string;
+  transaction_id?: string | null;
+  payment_reference?: string | null;
   paid_at?: string;
-  created_at: string;
+  created_at?: string;
 }
 
 export interface Discount {
-  id: string;
+  id: number | string;
   code: string;
   type: DiscountType;
-  value: number;
-  max_uses?: number;
-  used_count: number;
-  valid_from?: string;
-  valid_until?: string;
+  value: string | number;
+  max_uses?: number | null;
+  used_count?: number;
+  valid_from?: string | null;
+  valid_until?: string | null;
   is_active: boolean;
-  created_at: string;
+  created_at?: string;
 }
 
 export interface Tax {
-  id: string;
+  id: number | string;
   name: string;
-  type: TaxType;
-  rate: number;
+  rate: string | number;
+  applies_to?: TaxAppliesTo;
+  hsn_code?: string | null;
   is_default: boolean;
   is_active: boolean;
-  created_at: string;
+  created_at?: string;
 }
 
 export interface QuotationTemplate {
-  id: string;
+  id: number | string;
   name: string;
   description?: string;
-  status: QuotationStatus;
   valid_days: number;
-  created_at: string;
+  created_at?: string;
 }
 
 export interface Report {
-  id: string;
+  id: number | string;
   name: string;
   type: string;
-  generated_at: string;
+  generated_at?: string;
 }
 
 // ─── UI Helpers ────────────────────────────────────────────────────────────
@@ -205,7 +197,7 @@ export interface NavItem {
   label: string;
   path: string;
   icon?: string;
-  roles: UserRole[];
+  roles: import('./auth').UserRole[];
 }
 
 export interface TableColumn<T> {

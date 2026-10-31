@@ -1,7 +1,8 @@
 /**
  * src/context/AuthContext.tsx
- * Authentication context – skeleton only (no backend calls in Stage 1).
- * Stores the current user and exposes login/logout helpers.
+ * Authentication context wired to real backend endpoints.
+ * Persists session via localStorage token, restores user profile via /auth/me,
+ * and clears credentials completely on logout.
  */
 import React, {
   createContext,
@@ -11,7 +12,8 @@ import React, {
   useState,
 } from 'react';
 import { setAuthToken, clearAuthToken, getAuthToken } from '../services/api';
-import type { User, UserRole } from '../types';
+import authService from '../services/auth';
+import type { User } from '../types';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 interface AuthContextValue {
@@ -21,19 +23,11 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (token: string, user: User) => void;
   logout: () => void;
+  refreshUser: () => Promise<User | null>;
 }
 
 // ─── Context ───────────────────────────────────────────────────────────────
 const AuthContext = createContext<AuthContextValue | null>(null);
-
-// ─── DEV MOCK USER (to view layout during Stage 1) ─────────────────────────
-// DEV MOCK - REMOVE BEFORE FINAL
-const DEV_MOCK_USER: User = {
-  id: 'dev-admin-1',
-  email: 'admin@subsentry.dev',
-  name: 'Dev Admin',
-  role: 'admin' as UserRole,
-};
 
 // ─── Provider ──────────────────────────────────────────────────────────────
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -41,26 +35,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // On mount: restore session from localStorage (token check only)
+  // Restore session on mount from localStorage token
   useEffect(() => {
-    const storedToken = getAuthToken();
-    if (storedToken) {
-      setToken(storedToken);
-      // DEV MOCK - REMOVE BEFORE FINAL: auto-set dev user when token exists
-      setUser(DEV_MOCK_USER);
-    } else {
-      // DEV MOCK - REMOVE BEFORE FINAL: seed a fake token so layout is visible
-      const mockToken = 'dev-mock-token';
-      setAuthToken(mockToken);
-      setToken(mockToken);
-      setUser(DEV_MOCK_USER);
+    let isMounted = true;
+
+    async function restoreSession() {
+      const storedToken = getAuthToken();
+      if (!storedToken) {
+        if (isMounted) {
+          setUser(null);
+          setToken(null);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      try {
+        setToken(storedToken);
+        const profile = await authService.getMe();
+        if (isMounted) {
+          setUser(profile);
+        }
+      } catch (err) {
+        // If stored token is invalid or expired, clear it
+        console.warn('[AuthContext] Session restoration failed:', err);
+        clearAuthToken();
+        if (isMounted) {
+          setToken(null);
+          setUser(null);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
     }
-    setIsLoading(false);
+
+    restoreSession();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const login = useCallback((newToken: string, newUser: User) => {
     setAuthToken(newToken);
     setToken(newToken);
+    // Ensure name alias is set
+    if (!newUser.name && newUser.full_name) {
+      newUser.name = newUser.full_name;
+    }
     setUser(newUser);
   }, []);
 
@@ -68,6 +92,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearAuthToken();
     setToken(null);
     setUser(null);
+  }, []);
+
+  const refreshUser = useCallback(async (): Promise<User | null> => {
+    try {
+      const profile = await authService.getMe();
+      setUser(profile);
+      return profile;
+    } catch {
+      return null;
+    }
   }, []);
 
   return (
@@ -79,6 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         login,
         logout,
+        refreshUser,
       }}
     >
       {children}
