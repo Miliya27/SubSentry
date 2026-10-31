@@ -69,6 +69,17 @@ CurrentUserDep = Annotated[User, Depends(get_current_user)]
 # Role-enforcement factory
 # ---------------------------------------------------------------------------
 
+def require_role(*roles):
+    flat_roles = []
+    for r in roles:
+        if isinstance(r, (list, tuple, set)):
+            for item in r:
+                flat_roles.append(item.value if hasattr(item, "value") else str(item))
+        else:
+            flat_roles.append(r.value if hasattr(r, "value") else str(r))
+    return require_roles(*flat_roles)
+
+
 def require_roles(*roles: str):
     """
     Returns a FastAPI dependency that enforces the caller has one of the
