@@ -46,6 +46,28 @@ text-decoration:none;border-radius:4px;">Reset Password</a></p>
         _print_to_console(to_email, subject, reset_link, body_text)
 
 
+def send_invoice_email(to_email: str, invoice_number: str, total_amount: str) -> None:
+    """Send (or print) an invoice email."""
+    subject = f"SubSentry – Invoice {invoice_number}"
+    body_text = (
+        f"Hi,\n\n"
+        f"Your invoice {invoice_number} has been generated for amount {total_amount}.\n\n"
+        f"Please review and process payment per the payment terms.\n\n"
+        f"— SubSentry"
+    )
+    body_html = f"""
+<p>Hi,</p>
+<p>Your invoice <strong>{invoice_number}</strong> has been generated for amount <strong>{total_amount}</strong>.</p>
+<p>Please review and process payment per the payment terms.</p>
+<p>— SubSentry</p>
+"""
+
+    if settings.EMAIL_MODE == "smtp":
+        _send_via_smtp(to_email, subject, body_text, body_html)
+    else:
+        _print_to_console(to_email, subject, f"Invoice {invoice_number}", body_text)
+
+
 def _print_to_console(to: str, subject: str, reset_link: str, body: str) -> None:
     """
     DEV EMAIL: print to terminal. Does NOT send an actual email.
@@ -53,14 +75,14 @@ def _print_to_console(to: str, subject: str, reset_link: str, body: str) -> None
     """
     separator = "=" * 60
     logger.info(
-        "\n%s\n[DEV EMAIL] To: %s\nSubject: %s\nReset link: %s\n\n%s\n%s",
+        "\n%s\n[DEV EMAIL] To: %s\nSubject: %s\nReference: %s\n\n%s\n%s",
         separator, to, subject, reset_link, body, separator,
     )
     # Also print to stdout so it's visible even without a log handler
     print(f"\n{separator}")
     print(f"[DEV EMAIL] To: {to}")
     print(f"Subject: {subject}")
-    print(f"Reset link: {reset_link}")
+    print(f"Reference: {reset_link}")
     print(f"{separator}\n")
 
 
@@ -81,8 +103,8 @@ def _send_via_smtp(to: str, subject: str, body_text: str, body_html: str) -> Non
             if settings.SMTP_USER:
                 server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
             server.sendmail(settings.SMTP_FROM, [to], msg.as_string())
-        logger.info("Password reset email sent to %s", to)
+        logger.info("Email sent to %s", to)
     except Exception as exc:
         # Log but don't expose SMTP details in the API response
-        logger.error("Failed to send reset email to %s: %s", to, exc)
+        logger.error("Failed to send email to %s: %s", to, exc)
         raise

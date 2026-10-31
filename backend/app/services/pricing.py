@@ -4,10 +4,11 @@ All arithmetic uses Decimal; no floats.
 """
 from __future__ import annotations
 
+from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
-from app.models.models import Plan, Product, ProductVariant, TaxRule
+from app.models.models import DiscountRule, DiscountTypeEnum, Plan, Product, ProductVariant, TaxRule
 
 
 # Money quantizer: always 2 decimal places, ROUND_HALF_UP
@@ -101,3 +102,131 @@ def calculate_subscription_totals(
     total_tax = quantize_money(total_tax)
     total = quantize_money(subtotal + total_tax)
     return subtotal, total_tax, total
+
+
+# ---------------------------------------------------------------------------
+# Discount and Invoice Calculation Order (Hour 5)
+# ---------------------------------------------------------------------------
+
+def find_best_discount_rule(
+    base: Decimal,
+    rules: list[DiscountRule],
+    as_of_date: date | None = None,
+) -> tuple[DiscountRule | None, Decimal]:
+    """
+    Find best eligible active discount rule for base amount.
+    Eligible conditions:
+      - is_active is True
+      - as_of_date >= valid_from (if valid_from set)
+      - as_of_date <= valid_until (if valid_until set)
+      - uses_count < max_uses (if max_uses set)
+      - base >= min_amount
+    Discount computation:
+      - percent: base * (value / 100)
+      - fixed: min(value, base)
+    Returns (best_rule, discount_amount). If none eligible or discount is 0, returns (None, 0.00).
+    """
+    base = quantize_money(base)
+    best_rule: DiscountRule | None = None
+    best_discount = Decimal("0.00")
+
+    for rule in rules:
+        if not rule.is_active:
+            continue
+        if as_of_date:
+            if rule.valid_from and as_of_date < rule.valid_from:
+                continue
+            if rule.valid_until and as_of_date > rule.valid_until:
+                continue
+        if rule.max_uses is not None and rule.uses_count >= rule.max_uses:
+            continue
+        min_amt = Decimal(str(rule.min_amount or "0.00"))
+        if base < min_amt:
+            continue
+
+        rule_val = Decimal(str(rule.value))
+        rtype = rule.type.value if hasattr(rule.type, "value") else str(rule.type)
+        if rtype == "percent":
+            disc = quantize_money(base * (rule_val / Decimal("100.00")))
+        else:
+            disc = quantize_money(min(rule_val, base))
+
+        if disc > best_discount:
+            best_discount = disc
+            best_rule = rule
+
+    return best_rule, best_discount
+
+
+def calculate_line_pricing(
+    unit_price_val: Decimal,
+    quantity: Decimal,
+    tax_rate_percent: Decimal | None = None,
+    discount_rule: DiscountRule | None = None,
+    explicit_discount: Decimal = Decimal("0.00"),
+) -> dict[str, Decimal]:
+    """
+    CALCULATION ORDER per line:
+    1. unit_price = quantized to 2dp
+    2. line_base = unit_price * qty (quantized to 2dp)
+    3. discount = best eligible rule (or explicit_discount) quantized to 2dp
+    4. taxable = line_base - discount (quantized to 2dp)
+    5. tax = taxable * rate / 100 (quantized to 2dp)
+    6. line_total = taxable + tax (quantized to 2dp)
+
+    Worked example:
+    2560 x 5 = 12800, 10% off = 1280, taxable 11520, 18% tax = 2073.60, total 13593.60
+    """
+    u_price = quantize_money(Decimal(str(unit_price_val)))
+    qty = quantize_money(Decimal(str(quantity)))
+    line_base = quantize_money(u_price * qty)
+
+    if discount_rule is not None:
+        rule_val = Decimal(str(discount_rule.value))
+        rtype = discount_rule.type.value if hasattr(discount_rule.type, "value") else str(discount_rule.type)
+        if rtype == "percent":
+            discount = quantize_money(line_base * (rule_val / Decimal("100.00")))
+        else:
+            discount = quantize_money(min(rule_val, line_base))
+    else:
+        discount = quantize_money(Decimal(str(explicit_discount or "0.00")))
+        discount = min(discount, line_base)
+
+    taxable = quantize_money(line_base - discount)
+
+    if tax_rate_percent is not None:
+        rate = Decimal(str(tax_rate_percent))
+        tax = quantize_money(taxable * (rate / Decimal("100.00")))
+    else:
+        tax = Decimal("0.00")
+
+    line_total = quantize_money(taxable + tax)
+
+    return {
+        "unit_price": u_price,
+        "quantity": qty,
+        "line_base": line_base,
+        "discount": discount,
+        "taxable": taxable,
+        "tax": tax,
+        "line_total": line_total,
+    }
+
+
+def calculate_invoice_totals(
+    lines_pricing: list[dict[str, Decimal]],
+) -> tuple[Decimal, Decimal, Decimal, Decimal]:
+    """
+    Invoice totals = sums of line values.
+    Returns (subtotal, discount_amount, tax_amount, total).
+    where:
+      subtotal = sum(line_base)
+      discount_amount = sum(discount)
+      tax_amount = sum(tax)
+      total = sum(line_total) == subtotal - discount_amount + tax_amount
+    """
+    subtotal = quantize_money(sum((lp["line_base"] for lp in lines_pricing), Decimal("0.00")))
+    discount_amount = quantize_money(sum((lp["discount"] for lp in lines_pricing), Decimal("0.00")))
+    tax_amount = quantize_money(sum((lp["tax"] for lp in lines_pricing), Decimal("0.00")))
+    total = quantize_money(sum((lp["line_total"] for lp in lines_pricing), Decimal("0.00")))
+    return subtotal, discount_amount, tax_amount, total

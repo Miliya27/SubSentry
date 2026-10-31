@@ -168,6 +168,7 @@
 | `status` | ENUM(`quotationstatusenum`) | NOT NULL | `draft` | `draft\|sent\|accepted\|rejected` |
 | `valid_until` | DATE | NULL | — | |
 | `notes` | TEXT | NULL | — | |
+| `sent_at` | DATETIME(tz) | NULL | — | Set when invoice is emailed via /send |
 | `created_at` | DATETIME(tz) | NOT NULL | `now()` | |
 
 ---
@@ -243,6 +244,7 @@
 | `discount_amount` | NUMERIC(12,2) | NOT NULL | `0.00` | |
 | `total` | NUMERIC(12,2) | NOT NULL | `0.00` | `subtotal + tax_amount − discount_amount` |
 | `notes` | TEXT | NULL | — | |
+| `sent_at` | DATETIME(tz) | NULL | — | Set when invoice is emailed via /send |
 | `created_at` | DATETIME(tz) | NOT NULL | `now()` | |
 
 **Constraints:**
@@ -280,6 +282,7 @@
 | `method` | ENUM(`paymentmethodenum`) | NOT NULL | — | `cash\|bank_transfer\|upi\|card\|cheque` |
 | `reference` | VARCHAR(255) | NULL | — | UTR / cheque no. / txn ref |
 | `notes` | TEXT | NULL | — | |
+| `sent_at` | DATETIME(tz) | NULL | — | Set when invoice is emailed via /send |
 | `created_at` | DATETIME(tz) | NOT NULL | `now()` | |
 
 **Indexes:** `ix_payments_payment_date` on `payment_date`

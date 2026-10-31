@@ -435,6 +435,7 @@ class Invoice(Base):
     discount_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0.00"))
     total: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0.00"))
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -464,9 +465,15 @@ class InvoiceLine(Base):
     tax_rule_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("tax_rules.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    discount_rule_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("discount_rules.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     line_total: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0.00"))
 
     invoice: Mapped["Invoice"] = relationship("Invoice", back_populates="lines")
+    product_variant: Mapped[Optional["ProductVariant"]] = relationship("ProductVariant")
+    tax_rule: Mapped[Optional["TaxRule"]] = relationship("TaxRule")
+    discount_rule: Mapped[Optional["DiscountRule"]] = relationship("DiscountRule")
 
 
 class Payment(Base):
