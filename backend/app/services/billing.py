@@ -10,13 +10,11 @@ from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.models import (
     BillingFrequencyEnum,
-    Customer,
     DiscountRule,
     Invoice,
     InvoiceLine,

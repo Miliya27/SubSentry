@@ -9,7 +9,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_user, require_role
+from app.core.deps import require_role
 from app.database.session import get_db
 from app.models.models import DiscountRule, RoleEnum, User
 from app.schemas.discount import CreateDiscountRequest, DiscountOut, UpdateDiscountRequest
