@@ -1636,6 +1636,7 @@ Record a payment against an invoice.
     "total_invoiced": "42034.20",
     "amount_paid": "21017.10",
     "outstanding": "21017.10",
+    "overdue_count": 0,
     "next_renewal": "2026-12-01"
   },
   "message": "OK"

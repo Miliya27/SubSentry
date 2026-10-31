@@ -36,6 +36,7 @@ from app.routes import billing as billing_router
 from app.routes import invoices as invoices_router
 from app.routes import discounts as discounts_router
 from app.routes import payments as payments_router
+from app.routes import dashboard as dashboard_router
 
 logger = logging.getLogger(__name__)
 
@@ -162,6 +163,7 @@ app.include_router(billing_router.router, prefix="/api/v1")
 app.include_router(invoices_router.router, prefix="/api/v1")
 app.include_router(discounts_router.router, prefix="/api/v1")
 app.include_router(payments_router.router, prefix="/api/v1")
+app.include_router(dashboard_router.router, prefix="/api/v1")
 
 
 @app.get(
