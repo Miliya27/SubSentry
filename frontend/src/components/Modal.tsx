@@ -1,6 +1,6 @@
 /**
  * src/components/Modal.tsx
- * Accessible modal dialog with backdrop, focus trap, and Escape-to-close.
+ * Accessible modal dialog with backdrop, focus trap, and Escape-to-close in light theme.
  */
 import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
@@ -52,7 +52,9 @@ export function Modal({
     } else {
       document.body.style.overflow = '';
     }
-    return () => { document.body.style.overflow = ''; };
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -67,7 +69,7 @@ export function Modal({
     >
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={preventClose ? undefined : onClose}
         aria-hidden="true"
       />
@@ -76,29 +78,29 @@ export function Modal({
       <div
         ref={panelRef}
         className={cn(
-          'relative w-full bg-slate-900 border border-slate-800',
-          'rounded-2xl shadow-2xl shadow-black/50 animate-scale-in',
+          'relative w-full bg-white border border-slate-200 text-slate-900',
+          'rounded-2xl shadow-xl animate-scale-in',
           sizeMap[size]
         )}
       >
         {/* Header */}
         {(title || !preventClose) && (
-          <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-slate-800">
+          <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-slate-100">
             <div>
               {title && (
-                <h2 id="modal-title" className="text-base font-semibold text-slate-100">
+                <h2 id="modal-title" className="text-base font-bold text-slate-900">
                   {title}
                 </h2>
               )}
               {description && (
-                <p id="modal-desc" className="mt-1 text-sm text-slate-400">
+                <p id="modal-desc" className="mt-1 text-xs text-slate-500">
                   {description}
                 </p>
               )}
             </div>
             {!preventClose && (
               <button
-                className="btn-icon btn-ghost ml-4 -mt-1 -mr-2"
+                className="btn-icon btn-ghost ml-4 -mt-1 -mr-2 text-slate-400 hover:text-slate-600"
                 onClick={onClose}
                 aria-label="Close modal"
               >
@@ -114,3 +116,5 @@ export function Modal({
     </div>
   );
 }
+
+export default Modal;

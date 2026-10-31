@@ -9,7 +9,7 @@ import { SkeletonRow } from './Spinner';
 import { cn } from '../utils/cn';
 import type { TableColumn } from '../types';
 
-interface DataTableProps<T extends Record<string, unknown>> {
+interface DataTableProps<T extends object> {
   columns: TableColumn<T>[];
   data: T[];
   isLoading?: boolean;
@@ -27,7 +27,7 @@ interface DataTableProps<T extends Record<string, unknown>> {
 
 type SortDir = 'asc' | 'desc' | null;
 
-export function DataTable<T extends Record<string, unknown>>({
+export function DataTable<T extends object>({
   columns,
   data,
   isLoading = false,
@@ -58,8 +58,8 @@ export function DataTable<T extends Record<string, unknown>>({
   const sorted = React.useMemo(() => {
     if (!sortKey || !sortDir) return data;
     return [...data].sort((a, b) => {
-      const av = a[sortKey];
-      const bv = b[sortKey];
+      const av = (a as Record<string, unknown>)[sortKey];
+      const bv = (b as Record<string, unknown>)[sortKey];
       const dir = sortDir === 'asc' ? 1 : -1;
       if (av == null) return dir;
       if (bv == null) return -dir;

@@ -1,8 +1,9 @@
 /**
  * src/layouts/AppLayout.tsx
- * Main authenticated shell: collapsible sidebar + top header.
- * – Desktop (≥768px): persistent sidebar (240px), collapsible to rail (64px)
- * – Mobile (<768px): sidebar hidden, hamburger opens a full drawer overlay
+ * Main authenticated shell in light theme:
+ * - Collapsible sidebar + top header
+ * - Inter font, #F8FAFC page background, white cards/panels, slate-900/600 text, indigo #4F46E5 primary
+ * - RBAC-filtered navigation links
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate, useLocation, Outlet } from 'react-router-dom';
@@ -25,7 +26,7 @@ import {
   ChevronRight,
   Bell,
   LogOut,
-  User,
+  User as UserIcon,
   ChevronDown,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -34,7 +35,7 @@ import { cn } from '../utils/cn';
 
 // ─── Navigation config ─────────────────────────────────────────────────────
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard',            path: '/dashboard',             icon: 'LayoutDashboard',  roles: ['admin', 'staff', 'customer'] },
+  { label: 'Dashboard',            path: '/dashboard',             icon: 'LayoutDashboard',  roles: ['admin', 'staff'] },
   { label: 'Customers',            path: '/customers',             icon: 'Users',            roles: ['admin', 'staff'] },
   { label: 'Products',             path: '/products',              icon: 'Package',          roles: ['admin', 'staff'] },
   { label: 'Plans',                path: '/plans',                 icon: 'CreditCard',       roles: ['admin', 'staff'] },
@@ -106,30 +107,30 @@ function Sidebar({
   return (
     <aside
       className={cn(
-        'flex flex-col bg-slate-950 border-r border-slate-800',
-        'transition-all duration-250 ease-in-out flex-shrink-0',
+        'flex flex-col bg-white border-r border-slate-200',
+        'transition-all duration-200 ease-in-out flex-shrink-0',
         collapsed ? 'w-16' : 'w-60'
       )}
     >
       {/* Logo / brand */}
       <div
         className={cn(
-          'flex items-center h-16 px-4 border-b border-slate-800 gap-3 flex-shrink-0',
+          'flex items-center h-16 px-4 border-b border-slate-200 gap-3 flex-shrink-0',
           collapsed && 'justify-center px-2'
         )}
       >
-        <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary-600 flex-shrink-0">
+        <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary-600 flex-shrink-0 shadow-sm shadow-primary-500/30">
           <span className="text-white text-sm font-bold">S</span>
         </div>
         {!collapsed && (
-          <span className="font-bold text-slate-100 text-lg tracking-tight truncate">
+          <span className="font-bold text-slate-900 text-lg tracking-tight truncate">
             SubSentry
           </span>
         )}
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2 space-y-0.5" aria-label="Main navigation">
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2 space-y-1" aria-label="Main navigation">
         {visibleItems.map((item) => (
           <SidebarLink
             key={item.path}
@@ -141,7 +142,7 @@ function Sidebar({
       </nav>
 
       {/* Collapse toggle (desktop only) */}
-      <div className="hidden md:flex items-center justify-end px-2 py-3 border-t border-slate-800">
+      <div className="hidden md:flex items-center justify-end px-3 py-3 border-t border-slate-200">
         <button
           onClick={onToggle}
           className="btn-icon btn-ghost"
@@ -170,6 +171,8 @@ function TopHeader({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  const displayName = user?.full_name || user?.name || user?.email || 'User';
+
   // Close user menu on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -187,7 +190,7 @@ function TopHeader({
   }
 
   return (
-    <header className="flex items-center justify-between h-16 px-4 md:px-6 bg-slate-950 border-b border-slate-800 flex-shrink-0">
+    <header className="flex items-center justify-between h-16 px-4 md:px-6 bg-white border-b border-slate-200 flex-shrink-0">
       {/* Mobile hamburger */}
       <button
         className="md:hidden btn-icon btn-ghost"
@@ -203,17 +206,26 @@ function TopHeader({
         <div className="flex items-center justify-center h-7 w-7 rounded-md bg-primary-600">
           <span className="text-white text-xs font-bold">S</span>
         </div>
-        <span className="font-bold text-slate-100 text-base">SubSentry</span>
+        <span className="font-bold text-slate-900 text-base">SubSentry</span>
       </div>
 
       {/* Spacer on desktop */}
       <div className="hidden md:block" />
 
       {/* Right side */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
+        {/* Role badge */}
+        <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 capitalize">
+          {user?.role}
+        </span>
+
         {/* Notification bell (placeholder) */}
-        <button className="btn-icon btn-ghost relative" aria-label="Notifications" id="notifications-button">
-          <Bell className="h-4 w-4" />
+        <button
+          className="btn-icon btn-ghost relative"
+          aria-label="Notifications"
+          id="notifications-button"
+        >
+          <Bell className="h-4 w-4 text-slate-600" />
           <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden="true" />
         </button>
 
@@ -222,47 +234,47 @@ function TopHeader({
           <button
             id="user-menu-button"
             className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-lg
-                       text-sm text-slate-300 hover:bg-slate-800
+                       text-sm text-slate-700 hover:bg-slate-100
                        transition-colors duration-150"
             onClick={() => setUserMenuOpen((o) => !o)}
             aria-haspopup="true"
             aria-expanded={userMenuOpen}
           >
-            <div className="h-7 w-7 rounded-full bg-primary-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-              {user?.name?.charAt(0).toUpperCase() ?? 'U'}
+            <div className="h-8 w-8 rounded-full bg-primary-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+              {displayName.charAt(0).toUpperCase()}
             </div>
-            <div className="hidden sm:flex flex-col items-start leading-none">
-              <span className="font-medium text-slate-200 text-xs">{user?.name}</span>
-              <span className="text-slate-500 text-xs capitalize">{user?.role}</span>
+            <div className="hidden sm:flex flex-col items-start leading-none text-left">
+              <span className="font-semibold text-slate-900 text-xs truncate max-w-[120px]">{displayName}</span>
+              <span className="text-slate-500 text-[11px] capitalize">{user?.role}</span>
             </div>
-            <ChevronDown className={cn('h-3 w-3 transition-transform', userMenuOpen && 'rotate-180')} />
+            <ChevronDown className={cn('h-3.5 w-3.5 text-slate-400 transition-transform', userMenuOpen && 'rotate-180')} />
           </button>
 
           {/* Dropdown */}
           {userMenuOpen && (
             <div
-              className="absolute right-0 top-full mt-1.5 w-48 bg-slate-900
-                         border border-slate-800 rounded-xl shadow-xl
-                         shadow-black/50 py-1 z-30 animate-scale-in"
+              className="absolute right-0 top-full mt-1.5 w-52 bg-white
+                         border border-slate-200 rounded-xl shadow-lg
+                         py-1.5 z-30 animate-scale-in"
               role="menu"
               aria-labelledby="user-menu-button"
             >
-              <div className="px-3 py-2 border-b border-slate-800">
-                <p className="text-xs font-semibold text-slate-200 truncate">{user?.name}</p>
-                <p className="text-xs text-slate-500 truncate">{user?.email}</p>
+              <div className="px-3.5 py-2 border-b border-slate-100">
+                <p className="text-xs font-semibold text-slate-900 truncate">{displayName}</p>
+                <p className="text-[11px] text-slate-500 truncate">{user?.email}</p>
               </div>
               <button
                 role="menuitem"
-                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-300
-                           hover:bg-slate-800 transition-colors"
+                className="flex items-center gap-2 w-full px-3.5 py-2 text-xs text-slate-700
+                           hover:bg-slate-50 transition-colors"
                 onClick={() => { setUserMenuOpen(false); navigate('/settings'); }}
               >
-                <User className="h-4 w-4" /> Profile
+                <UserIcon className="h-4 w-4 text-slate-500" /> Account Settings
               </button>
               <button
                 role="menuitem"
-                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-400
-                           hover:bg-slate-800 transition-colors"
+                className="flex items-center gap-2 w-full px-3.5 py-2 text-xs text-rose-600
+                           hover:bg-rose-50 transition-colors"
                 onClick={handleLogout}
                 id="logout-button"
               >
@@ -286,11 +298,9 @@ function MobileDrawer({
   onClose: () => void;
   role: UserRole;
 }) {
-  // Close on location change
   const location = useLocation();
   useEffect(() => { onClose(); }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Lock scroll
   useEffect(() => {
     document.body.style.overflow = isOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
@@ -300,26 +310,24 @@ function MobileDrawer({
 
   return (
     <div className="fixed inset-0 z-40 flex md:hidden" aria-modal="true" role="dialog" aria-label="Navigation drawer">
-      {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in"
         onClick={onClose}
         aria-hidden="true"
       />
-      {/* Drawer panel */}
-      <div className="relative w-72 bg-slate-950 border-r border-slate-800 flex flex-col animate-slide-in-left">
-        <div className="flex items-center justify-between px-4 h-16 border-b border-slate-800">
+      <div className="relative w-72 bg-white border-r border-slate-200 flex flex-col animate-slide-in-left">
+        <div className="flex items-center justify-between px-4 h-16 border-b border-slate-200">
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-md bg-primary-600 flex items-center justify-center">
               <span className="text-white text-xs font-bold">S</span>
             </div>
-            <span className="font-bold text-slate-100">SubSentry</span>
+            <span className="font-bold text-slate-900">SubSentry</span>
           </div>
           <button className="btn-icon btn-ghost" onClick={onClose} aria-label="Close menu">
             <X className="h-4 w-4" />
           </button>
         </div>
-        <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-0.5" aria-label="Mobile navigation">
+        <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1" aria-label="Mobile navigation">
           {NAV_ITEMS.filter((i) => i.roles.includes(role)).map((item) => (
             <SidebarLink key={item.path} item={item} collapsed={false} onNavigate={onClose} />
           ))}
@@ -346,7 +354,7 @@ export function AppLayout() {
   if (isLoading || !user) return null;
 
   return (
-    <div className="flex h-dvh bg-slate-950 overflow-hidden">
+    <div className="flex h-dvh bg-[#F8FAFC] overflow-hidden text-slate-900">
       {/* Desktop sidebar */}
       <div className="hidden md:flex">
         <Sidebar
@@ -363,7 +371,7 @@ export function AppLayout() {
         role={user.role}
       />
 
-      {/* Main area */}
+      {/* Main content area */}
       <div className="flex flex-col flex-1 min-w-0">
         <TopHeader onMobileMenuOpen={() => setMobileOpen(true)} />
         <main
@@ -376,3 +384,5 @@ export function AppLayout() {
     </div>
   );
 }
+
+export default AppLayout;
