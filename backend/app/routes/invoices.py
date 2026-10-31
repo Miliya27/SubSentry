@@ -1,13 +1,13 @@
 """
-Routes for Invoices (API Contract 8.9).
+Routes for Invoices (API Contract 8.9 & 8.12).
 Handles listing with customer scoping, invoice detail, confirmation,
-cancellation, sending via mailer, and print rendering.
+cancellation, sending via mailer, print rendering, and payment recording.
 """
 from __future__ import annotations
 
 from datetime import date, datetime, timezone
 from decimal import Decimal
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -20,6 +20,7 @@ from app.models.models import (
     Invoice,
     InvoiceLine,
     InvoiceStatusEnum,
+    Payment,
     RoleEnum,
     TaxRule,
     User,
@@ -31,6 +32,11 @@ from app.schemas.invoice import (
     InvoicePrintOut,
     PaymentOut,
     TaxBreakdownItem,
+)
+from app.schemas.payment import CreatePaymentRequest
+from app.services.finance import (
+    compute_invoice_financials,
+    get_invoice_amount_paid_db,
 )
 from app.services.mailer import send_invoice_email
 from app.services.pricing import money_str, quantize_money
@@ -53,8 +59,7 @@ def _business_rule(msg: str) -> HTTPException:
 
 
 def _build_invoice_dict(inv: Invoice) -> dict:
-    paid = quantize_money(sum((p.amount for p in inv.payments), Decimal("0.00")))
-    outstanding = quantize_money(inv.total - paid)
+    amount_paid, outstanding, payment_state, is_overdue = compute_invoice_financials(inv)
     return {
         "id": inv.id,
         "subscription_id": inv.subscription_id,
@@ -69,8 +74,10 @@ def _build_invoice_dict(inv: Invoice) -> dict:
         "tax_amount": money_str(inv.tax_amount),
         "discount_amount": money_str(inv.discount_amount),
         "total": money_str(inv.total),
-        "amount_paid": money_str(paid),
+        "amount_paid": money_str(amount_paid),
         "outstanding": money_str(outstanding),
+        "is_overdue": is_overdue,
+        "payment_state": payment_state,
         "notes": inv.notes,
         "sent_at": inv.sent_at,
         "created_at": inv.created_at,
@@ -366,3 +373,99 @@ def get_invoice_print_data(
         "message": "OK",
     }
 
+
+@router.post("/{id}/payments", response_model=dict, status_code=status.HTTP_201_CREATED)
+def record_invoice_payment(
+    id: int,
+    payload: CreatePaymentRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role([RoleEnum.admin, RoleEnum.staff])),
+):
+    """
+    Record payment against an invoice (Hour 6).
+    Rules:
+      - invoice status must be confirmed (not draft, cancelled or paid)
+      - amount > 0
+      - amount <= outstanding (re-read SUM of payments inside same transaction)
+      - method in cash|bank_transfer|card|upi|cheque
+      - payment_date not in the future
+      - invoice.status becomes 'paid' only when outstanding is exactly 0.00;
+        partial payments leave it 'confirmed'.
+    """
+    invoice = db.query(Invoice).filter(Invoice.id == id).first()
+    if not invoice:
+        raise _not_found()
+
+    # Rule: invoice status must be confirmed
+    if invoice.status != InvoiceStatusEnum.confirmed:
+        status_name = invoice.status.value if hasattr(invoice.status, "value") else str(invoice.status)
+        raise _business_rule(f"Payments can only be recorded on confirmed invoices. Current status: '{status_name}'.")
+
+    # Rule: amount > 0
+    if payload.amount <= Decimal("0.00"):
+        raise _business_rule("Payment amount must be greater than 0.")
+
+    # Rule: payment_date not in future
+    if payload.payment_date > date.today():
+        raise _business_rule("Payment date cannot be in the future.")
+
+    # Re-read the SUM of payments inside the same transaction before inserting
+    current_paid = get_invoice_amount_paid_db(db, invoice.id)
+    outstanding = quantize_money(invoice.total - current_paid)
+
+    pay_amount = quantize_money(payload.amount)
+    if pay_amount > outstanding:
+        raise _business_rule(
+            f"Payment amount ({money_str(pay_amount)}) exceeds outstanding balance ({money_str(outstanding)})."
+        )
+
+    payment = Payment(
+        invoice_id=invoice.id,
+        customer_id=invoice.customer_id,
+        amount=pay_amount,
+        payment_date=payload.payment_date,
+        method=payload.method,
+        reference=payload.reference,
+        notes=payload.notes,
+    )
+    db.add(payment)
+    db.flush()
+
+    new_paid = quantize_money(current_paid + pay_amount)
+    new_outstanding = quantize_money(max(Decimal("0.00"), invoice.total - new_paid))
+
+    if new_outstanding == Decimal("0.00"):
+        invoice.status = InvoiceStatusEnum.paid
+        payment_state = "paid"
+    else:
+        payment_state = "partially_paid"
+
+    db.commit()
+    db.refresh(payment)
+    db.refresh(invoice)
+
+    return {
+        "success": True,
+        "data": {
+            "payment": {
+                "id": payment.id,
+                "invoice_id": payment.invoice_id,
+                "customer_id": payment.customer_id,
+                "amount": money_str(payment.amount),
+                "payment_date": payment.payment_date,
+                "method": payment.method.value if hasattr(payment.method, "value") else str(payment.method),
+                "reference": payment.reference,
+                "notes": payment.notes,
+                "created_at": payment.created_at,
+            },
+            "invoice": {
+                "id": invoice.id,
+                "status": invoice.status.value if hasattr(invoice.status, "value") else str(invoice.status),
+                "total": money_str(invoice.total),
+                "amount_paid": money_str(new_paid),
+                "outstanding": money_str(new_outstanding),
+                "payment_state": payment_state,
+            },
+        },
+        "message": "Payment recorded.",
+    }
