@@ -29,6 +29,9 @@ from app.routes import users as users_router
 from app.routes import products as products_router
 from app.routes import plans as plans_router
 from app.routes import taxes as taxes_router
+from app.routes import customers as customers_router
+from app.routes import quotation_templates as quotation_templates_router
+from app.routes import subscriptions as subscriptions_router
 
 logger = logging.getLogger(__name__)
 
@@ -148,6 +151,9 @@ app.include_router(users_router.router, prefix="/api/v1")
 app.include_router(products_router.router, prefix="/api/v1")
 app.include_router(plans_router.router, prefix="/api/v1")
 app.include_router(taxes_router.router, prefix="/api/v1")
+app.include_router(customers_router.router, prefix="/api/v1")
+app.include_router(quotation_templates_router.router, prefix="/api/v1")
+app.include_router(subscriptions_router.router, prefix="/api/v1")
 
 
 @app.get(

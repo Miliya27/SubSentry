@@ -820,6 +820,7 @@ Soft-delete plan.
       "id": 1,
       "name": "Standard Odoo Quotation",
       "customer_id": 1,
+      "validity_days": 30,
       "status": "draft",
       "valid_until": "2026-12-31",
       "notes": null,
@@ -841,6 +842,7 @@ Soft-delete plan.
 {
   "name": "Standard Odoo Quotation",
   "customer_id": 1,
+  "validity_days": 30,
   "valid_until": "2026-12-31",
   "notes": "Includes Odoo variant",
   "lines": [
@@ -898,6 +900,7 @@ Partial update. `lines` replaces all existing lines if provided.
   "data": [
     {
       "id": 1,
+      "subscription_number": "SUB-2026-00001",
       "customer_id": 1,
       "plan_id": 1,
       "product_variant_id": 2,
@@ -965,7 +968,7 @@ Create a new subscription in `draft` status.
 | `lines[].quantity` ✅ | integer | ≥ `plan.min_quantity` |
 | `lines[].tax_rule_id` ❓ | integer | must exist |
 
-The server computes `unit_price` from `plan.price + variant.price_override` and `line_total`. Status is always `"draft"` on creation.
+The server snapshots `unit_price` from `plan.price + variant.extra_price` using `pricing.py` and computes `line_total`. Status is always `"draft"` on creation. Also assigns unique `subscription_number` (`SUB-YYYY-NNNNN`).
 
 **Response 201:** Subscription object with computed `unit_price`, `line_total`, `total`
 

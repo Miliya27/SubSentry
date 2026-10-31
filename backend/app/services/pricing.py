@@ -1,12 +1,13 @@
 """
-Pricing service – first part.
+Pricing service.
 All arithmetic uses Decimal; no floats.
 """
 from __future__ import annotations
 
 from decimal import ROUND_HALF_UP, Decimal
+from typing import Any
 
-from app.models.models import Plan, Product, ProductVariant
+from app.models.models import Plan, Product, ProductVariant, TaxRule
 
 
 # Money quantizer: always 2 decimal places, ROUND_HALF_UP
@@ -48,3 +49,55 @@ def unit_price(plan: Plan, variant: ProductVariant | None) -> Decimal:
     base: Decimal = Decimal(str(plan.price))
     extra: Decimal = Decimal(str(variant.extra_price)) if variant else Decimal("0.00")
     return quantize_money(base + extra)
+
+
+def calculate_line_total(
+    unit_price_val: Decimal,
+    quantity: Decimal,
+    discount: Decimal = Decimal("0.00"),
+) -> Decimal:
+    """
+    line_total = (unit_price * quantity) - discount
+    Quantized to 2 decimal places using ROUND_HALF_UP.
+    """
+    return quantize_money((Decimal(str(unit_price_val)) * Decimal(str(quantity))) - Decimal(str(discount)))
+
+
+def calculate_subscription_totals(
+    lines: list[Any],
+    tax_rules_map: dict[int, TaxRule] | None = None,
+) -> tuple[Decimal, Decimal, Decimal]:
+    """
+    Calculates (subtotal, tax_amount, total) for a collection of lines.
+    lines can be SubscriptionLine or QuotationTemplateLine objects or dicts.
+    tax_rules_map is a mapping of tax_rule_id -> TaxRule.
+    """
+    tax_rules_map = tax_rules_map or {}
+    subtotal = Decimal("0.00")
+    total_tax = Decimal("0.00")
+
+    for line in lines:
+        u_price = getattr(line, "unit_price", None)
+        qty = getattr(line, "quantity", None)
+        disc = getattr(line, "discount", Decimal("0.00"))
+        tax_id = getattr(line, "tax_rule_id", None)
+
+        if isinstance(line, dict):
+            u_price = line.get("unit_price")
+            qty = line.get("quantity")
+            disc = line.get("discount", Decimal("0.00"))
+            tax_id = line.get("tax_rule_id")
+
+        lt = calculate_line_total(Decimal(str(u_price)), Decimal(str(qty)), Decimal(str(disc or "0.00")))
+        subtotal += lt
+
+        if tax_id and tax_id in tax_rules_map:
+            rule = tax_rules_map[tax_id]
+            rate = Decimal(str(rule.rate_percent))
+            line_tax = quantize_money(lt * (rate / Decimal("100.00")))
+            total_tax += line_tax
+
+    subtotal = quantize_money(subtotal)
+    total_tax = quantize_money(total_tax)
+    total = quantize_money(subtotal + total_tax)
+    return subtotal, total_tax, total
