@@ -164,6 +164,7 @@
 | `id` | INTEGER | NOT NULL | autoincrement | PK |
 | `name` | VARCHAR(255) | NOT NULL | — | |
 | `customer_id` | INTEGER | NULL | — | FK → `customers.id` SET NULL, indexed |
+| `validity_days` | INTEGER | NOT NULL | `30` | Default validity in days |
 | `status` | ENUM(`quotationstatusenum`) | NOT NULL | `draft` | `draft\|sent\|accepted\|rejected` |
 | `valid_until` | DATE | NULL | — | |
 | `notes` | TEXT | NULL | — | |
@@ -192,17 +193,21 @@
 | Column | Type | Nullable | Default | Notes |
 |---|---|---|---|---|
 | `id` | INTEGER | NOT NULL | autoincrement | PK |
+| `subscription_number` | VARCHAR(50) | NOT NULL | — | UNIQUE, format `SUB-YYYY-NNNNN` |
 | `customer_id` | INTEGER | NOT NULL | — | FK → `customers.id` CASCADE, indexed |
 | `plan_id` | INTEGER | NOT NULL | — | FK → `plans.id` RESTRICT, indexed |
 | `product_variant_id` | INTEGER | NULL | — | FK → `product_variants.id` SET NULL, indexed |
-| `status` | ENUM(`subscriptionstatusenum`) | NOT NULL | `trial` | ⚠ see Reconciliation |
+| `status` | ENUM(`subscriptionstatusenum`) | NOT NULL | `draft` | `draft\|quotation\|confirmed\|active\|paused\|closed` |
 | `start_date` | DATE | NOT NULL | — | |
+| `expiry_date` | DATE | NULL | — | Must be ≥ start_date |
 | `trial_end_date` | DATE | NULL | — | |
+| `payment_terms_days` | INTEGER | NOT NULL | `0` | Default 0 days |
+| `quotation_valid_until` | DATE | NULL | — | From template or validity_days |
 | `next_billing_date` | DATE | NULL | — | indexed |
 | `cancelled_at` | DATETIME(tz) | NULL | — | Set on close/cancel |
 | `created_at` | DATETIME(tz) | NOT NULL | `now()` | |
 
-> ⚠ **Missing columns**: `expiry_date` DATE, `payment_terms_days` INTEGER. See [Reconciliation](#reconciliation).
+> Columns `subscription_number`, `expiry_date`, `payment_terms_days`, and `quotation_valid_until` are present in `app/models/models.py`.
 
 ---
 

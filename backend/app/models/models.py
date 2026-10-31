@@ -302,6 +302,7 @@ class QuotationTemplate(Base):
         default=QuotationStatusEnum.draft,
     )
     valid_until: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    validity_days: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, default=30)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -333,12 +334,17 @@ class QuotationTemplateLine(Base):
     line_total: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0.00"))
 
     template: Mapped["QuotationTemplate"] = relationship("QuotationTemplate", back_populates="lines")
+    product_variant: Mapped[Optional["ProductVariant"]] = relationship("ProductVariant")
+    tax_rule: Mapped[Optional["TaxRule"]] = relationship("TaxRule")
 
 
 class Subscription(Base):
     __tablename__ = "subscriptions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    subscription_number: Mapped[Optional[str]] = mapped_column(
+        String(50), nullable=True, unique=True, index=True
+    )
     customer_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("customers.id", ondelete="CASCADE"), nullable=False, index=True
     )
@@ -359,6 +365,7 @@ class Subscription(Base):
     payment_terms_days: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     trial_end_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     next_billing_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True, index=True)
+    quotation_valid_until: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     cancelled_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -390,6 +397,12 @@ class SubscriptionLine(Base):
     )
 
     subscription: Mapped["Subscription"] = relationship("Subscription", back_populates="lines")
+    product_variant: Mapped[Optional["ProductVariant"]] = relationship("ProductVariant")
+    tax_rule: Mapped[Optional["TaxRule"]] = relationship("TaxRule")
+
+    @property
+    def line_total(self) -> Decimal:
+        return (self.unit_price * self.quantity) - self.discount
 
 
 class Invoice(Base):
