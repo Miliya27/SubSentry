@@ -11,6 +11,7 @@ from typing import Any, Optional
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.models.models import InvoiceStatusEnum
+from app.schemas.payment import PaymentOut
 from app.services.pricing import quantize_money
 
 
@@ -52,6 +53,8 @@ class InvoiceOut(BaseModel):
     total: str
     amount_paid: str = "0.00"
     outstanding: str = "0.00"
+    is_overdue: bool = False
+    payment_state: str = "unpaid"
     notes: Optional[str] = None
     sent_at: Optional[datetime] = None
     created_at: datetime
@@ -68,32 +71,6 @@ class InvoiceOut(BaseModel):
     def serialize_money(cls, v):
         if v is None:
             return "0.00"
-        return str(quantize_money(Decimal(str(v))))
-
-
-class PaymentOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    invoice_id: int
-    customer_id: int
-    amount: str
-    payment_date: date
-    method: str
-    reference: Optional[str] = None
-    notes: Optional[str] = None
-    created_at: datetime
-
-    @field_validator("method", mode="before")
-    @classmethod
-    def serialize_method(cls, v):
-        if hasattr(v, "value"):
-            return v.value
-        return v
-
-    @field_validator("amount", mode="before")
-    @classmethod
-    def serialize_amount(cls, v):
         return str(quantize_money(Decimal(str(v))))
 
 
@@ -115,4 +92,3 @@ class InvoicePrintOut(BaseModel):
     lines: list[InvoiceLineOut]
     payments: list[PaymentOut]
     tax_breakdown: list[TaxBreakdownItem]
-

@@ -1201,6 +1201,8 @@ Dry-run — shows which invoices *would* be created without committing.
       "total": "21017.10",
       "amount_paid": "0.00",
       "outstanding": "21017.10",
+      "is_overdue": false,
+      "payment_state": "unpaid",
       "notes": null,
       "created_at": "2026-11-01T04:00:00Z"
     }
@@ -1234,6 +1236,8 @@ Full invoice including lines and payments.
     "total": "21017.10",
     "amount_paid": "0.00",
     "outstanding": "21017.10",
+    "is_overdue": false,
+    "payment_state": "unpaid",
     "notes": null,
     "lines": [
       {
@@ -1514,7 +1518,8 @@ Record a payment against an invoice.
       "status": "confirmed",
       "total": "21017.10",
       "amount_paid": "5000.00",
-      "outstanding": "16017.10"
+      "outstanding": "16017.10",
+      "payment_state": "partially_paid"
     }
   },
   "message": "Payment recorded."
